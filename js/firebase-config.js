@@ -7,7 +7,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-aut
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCPbMtmFdj4H8N-XnpmJeTF7i2HzYSL6aM",
+  apiKey: "AIzaSyCPbMtmfdj4H8N-XnpmJeTF7i2HzYSL6aM",
   authDomain: "filosofia-interativa.firebaseapp.com",
   projectId: "filosofia-interativa",
   storageBucket: "filosofia-interativa.firebasestorage.app",
