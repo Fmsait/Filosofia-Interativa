@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Filosofia Interativa — Login</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Filosofia Interativa</h1>
+    <p class="sub">Entre com sua conta Google para acessar a atividade gamificada de Heráclito.</p>
+    <button id="loginBtn">Entrar com Google</button>
+    <div id="status" class="status"></div>
+  </main>
+
+  <script type="module">
+    import { entrarComGoogle, observarUsuario } from "./js/firebase-service.js";
+
+    const status = document.getElementById("status");
+    const loginBtn = document.getElementById("loginBtn");
+
+    observarUsuario((user) => {
+      if (user) {
+        window.location.href = "painel.html";
+      }
+    });
+
+    loginBtn.addEventListener("click", async () => {
+      try {
+        status.textContent = "Abrindo login...";
+        await entrarComGoogle();
+      } catch (erro) {
+        console.error(erro);
+        status.textContent = "Não foi possível entrar. Verifique se o login Google está ativado no Firebase.";
+      }
+    });
+  </script>
+</body>
+</html>
