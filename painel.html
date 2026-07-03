@@ -1,62 +1,53 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Filosofia Interativa — Painel</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel do Aluno — Filosofia Interativa</title>
+  <style>
+    body{margin:0;min-height:100vh;font-family:Arial,sans-serif;background:#eef5f7;color:#0f172a}.top{background:#0f2f4a;color:white;padding:22px 7vw;display:flex;justify-content:space-between;gap:16px;align-items:center}.top h1{margin:0;font-size:28px}.wrap{max-width:960px;margin:34px auto;padding:0 20px}.card{background:white;border-radius:22px;padding:26px;box-shadow:0 16px 40px rgba(15,47,74,.12);border:1px solid #dbeafe}.game{display:flex;justify-content:space-between;gap:20px;align-items:center}.title{font-size:25px;font-weight:800;margin-bottom:8px}.desc{color:#475569;line-height:1.45}.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;cursor:pointer;background:#0ea5e9;color:white;text-decoration:none;display:inline-block}.btn.off{background:#94a3b8;cursor:not-allowed}.sair{background:transparent;color:white;border:1px solid rgba(255,255,255,.5);border-radius:12px;padding:10px 14px;cursor:pointer}.small{color:#64748b;margin-top:12px}
+  </style>
 </head>
 <body>
-  <main class="card">
-    <h1>Painel do Aluno</h1>
-    <p id="boasVindas" class="sub">Carregando...</p>
-
-    <section class="game-card">
-      <h2>🌊 Heráclito — Logos e Movimento</h2>
-      <p>Atividade gamificada sobre movimento, mudança, unidade dos opostos e logos.</p>
-      <div id="resultadoHeraclito" class="meta">Verificando tentativa...</div>
-      <div class="row">
-        <a id="jogarHeraclito" class="btn" href="jogos/heraclito/index.html" style="display:none">Jogar</a>
-        <button id="sairBtn" class="secondary">Sair</button>
+  <header class="top"><div><h1>Filosofia Interativa</h1><div id="aluno">Carregando...</div></div><button id="sair" class="sair">Sair</button></header>
+  <main class="wrap">
+    <section class="card game">
+      <div>
+        <div class="title">Heráclito — Logos e Movimento</div>
+        <div class="desc">Jogo didático sobre mudança, conflito dos opostos e logos.</div>
+        <div id="resultado" class="small">Verificando tentativa...</div>
       </div>
+      <a id="jogar" class="btn off" href="#">Aguarde</a>
     </section>
   </main>
 
   <script type="module">
-    import { observarUsuario, sair, buscarResultadoHeraclito } from "./js/firebase-service.js";
+    import { observarUsuario, sair, buscarResultado } from "./js/firebase-service.js";
+    const aluno = document.getElementById("aluno");
+    const resultado = document.getElementById("resultado");
+    const jogar = document.getElementById("jogar");
+    document.getElementById("sair").onclick = sair;
 
-    const boasVindas = document.getElementById("boasVindas");
-    const resultadoBox = document.getElementById("resultadoHeraclito");
-    const jogarBtn = document.getElementById("jogarHeraclito");
-    const sairBtn = document.getElementById("sairBtn");
-
-    observarUsuario(async (user) => {
-      if (!user) {
-        window.location.href = "index.html";
-        return;
-      }
-
-      boasVindas.textContent = `Olá, ${user.displayName || "aluno"}.`;
-
+    observarUsuario(async user => {
+      if (!user) { location.href = "index.html"; return; }
+      aluno.textContent = `${user.displayName || "Aluno"} — ${user.email || ""}`;
       try {
-        const resultado = await buscarResultadoHeraclito(user.uid);
-
-        if (resultado) {
-          resultadoBox.innerHTML = `Atividade já realizada.<br>Pontuação: <strong>${resultado.pontuacao}</strong> | Acertos: <strong>${resultado.acertos}</strong> | Erros: <strong>${resultado.erros}</strong>`;
-          jogarBtn.style.display = "none";
+        const r = await buscarResultado(user.uid);
+        if (r) {
+          resultado.textContent = `Atividade já realizada. Pontuação registrada: ${r.pontuacao}.`;
+          jogar.textContent = "Já realizada";
+          jogar.classList.add("off");
+          jogar.removeAttribute("href");
         } else {
-          resultadoBox.textContent = "Atividade disponível. Você terá apenas uma tentativa registrada.";
-          jogarBtn.style.display = "inline-block";
+          resultado.textContent = "Atividade disponível. Você terá apenas uma tentativa.";
+          jogar.textContent = "Jogar";
+          jogar.classList.remove("off");
+          jogar.href = "jogos/heraclito/index.html";
         }
-      } catch (erro) {
-        console.error(erro);
-        resultadoBox.textContent = "Erro ao verificar resultado. Confira as regras do Firestore.";
+      } catch(e) {
+        resultado.textContent = "Erro ao verificar a tentativa. Confira o Firebase.";
+        console.error(e);
       }
-    });
-
-    sairBtn.addEventListener("click", async () => {
-      await sair();
-      window.location.href = "index.html";
     });
   </script>
 </body>

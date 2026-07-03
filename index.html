@@ -1,39 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Filosofia Interativa — Login</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff}
+    .card{width:min(520px,92vw);background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);border-radius:24px;padding:32px;box-shadow:0 24px 70px rgba(0,0,0,.35);text-align:center}
+    h1{font-size:38px;margin:0 0 8px}.sub{opacity:.9;font-size:18px;line-height:1.45}.btn{margin-top:26px;border:0;border-radius:16px;padding:16px 22px;font-weight:700;font-size:17px;cursor:pointer;background:#f7c948;color:#1f2937}.btn:hover{filter:brightness(1.05)}.status{margin-top:18px;color:#e5e7eb}
+  </style>
 </head>
 <body>
   <main class="card">
     <h1>Filosofia Interativa</h1>
     <p class="sub">Entre com sua conta Google para acessar a atividade gamificada de Heráclito.</p>
-    <button id="loginBtn">Entrar com Google</button>
+    <button id="loginBtn" class="btn">Entrar com Google</button>
     <div id="status" class="status"></div>
   </main>
 
   <script type="module">
     import { entrarComGoogle, observarUsuario } from "./js/firebase-service.js";
-
     const status = document.getElementById("status");
     const loginBtn = document.getElementById("loginBtn");
 
-    observarUsuario((user) => {
-      if (user) {
-        window.location.href = "painel.html";
-      }
+    observarUsuario(user => {
+      if (user) location.href = "painel.html";
     });
 
     loginBtn.addEventListener("click", async () => {
-      try {
-        status.textContent = "Abrindo login...";
-        await entrarComGoogle();
-      } catch (erro) {
-        console.error(erro);
-        status.textContent = "Não foi possível entrar. Verifique se o login Google está ativado no Firebase.";
-      }
+      status.textContent = "Abrindo login...";
+      try { await entrarComGoogle(); }
+      catch (e) { status.textContent = "Não foi possível entrar. Verifique a configuração do Firebase."; console.error(e); }
     });
   </script>
 </body>
