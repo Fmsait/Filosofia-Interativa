@@ -15,8 +15,12 @@ const ui = {
   score: document.getElementById("score"),
   acertos: document.getElementById("acertos"),
   erros: document.getElementById("erros"),
+  elapsed: document.getElementById("elapsed"),
   missionTitle: document.getElementById("missionTitle"),
   missionText: document.getElementById("missionText"),
+  progressText: document.getElementById("progressText"),
+  progressFill: document.getElementById("progressFill"),
+  phaseMap: document.getElementById("phaseMap"),
   modal: document.getElementById("activityModal"),
   activityKind: document.getElementById("activityKind"),
   activityTitle: document.getElementById("activityTitle"),
@@ -70,7 +74,7 @@ const stations = [
   {
     id: "mapa-conceitos",
     phase: 1,
-    x: 910,
+    x: 820,
     y: 380,
     kind: "match",
     label: "Associacao",
@@ -82,6 +86,20 @@ const stations = [
       ["Opostos", "Tensoes que formam a realidade"]
     ],
     reward: 30
+  },
+  {
+    id: "ordem-inicial",
+    phase: 1,
+    x: 1060,
+    y: 230,
+    kind: "order",
+    label: "Sequencia",
+    title: "Da aparencia ao problema filosofico",
+    text: "Organize a sequencia de ideias para formar um caminho de investigacao: primeiro observamos, depois percebemos o problema, por fim buscamos uma explicacao.",
+    prompt: "Clique nos blocos na ordem mais coerente.",
+    items: ["Observamos o mundo", "Percebemos a mudanca", "Buscamos uma ordem"],
+    answer: ["Observamos o mundo", "Percebemos a mudanca", "Buscamos uma ordem"],
+    reward: 25
   },
   {
     id: "ponte-rio",
@@ -113,7 +131,7 @@ const stations = [
   {
     id: "travessia-dois",
     phase: 2,
-    x: 760,
+    x: 720,
     y: 405,
     kind: "choice",
     label: "Questao",
@@ -122,6 +140,20 @@ const stations = [
     question: "A melhor interpretacao da travessia e:",
     options: ["A experiencia muda o mundo e tambem o sujeito.", "O rio prova que nada existe.", "A mudanca impede qualquer pensamento.", "Heraclito defendia a imobilidade."],
     answer: 0,
+    reward: 25
+  },
+  {
+    id: "correnteza-ideias",
+    phase: 2,
+    x: 980,
+    y: 240,
+    kind: "order",
+    label: "Sequencia",
+    title: "A correnteza das ideias",
+    text: "A imagem do rio nao serve apenas para falar da natureza. Ela tambem ajuda a pensar a experiencia humana.",
+    prompt: "Monte a sequencia interpretativa.",
+    items: ["O rio muda", "Quem entra tambem muda", "A realidade e processo"],
+    answer: ["O rio muda", "Quem entra tambem muda", "A realidade e processo"],
     reward: 25
   },
   {
@@ -154,7 +186,7 @@ const stations = [
   {
     id: "caca-palavras",
     phase: 3,
-    x: 920,
+    x: 850,
     y: 250,
     kind: "wordsearch",
     label: "Caca-palavras",
@@ -162,6 +194,20 @@ const stations = [
     text: "Encontre os conceitos escondidos. Clique em cada palavra da lista para revelar sua posicao no quadro.",
     words: ["LOGOS", "RIO", "FLUXO", "FOGO", "OPOSTOS"],
     reward: 35
+  },
+  {
+    id: "conflito-harmonia",
+    phase: 3,
+    x: 1080,
+    y: 395,
+    kind: "choice",
+    label: "Questao",
+    title: "Conflito e harmonia",
+    text: "Em Heraclito, conflito nao significa apenas briga ou destruicao. Muitas vezes, ele indica tensao produtiva entre elementos diferentes.",
+    question: "Qual exemplo combina melhor com essa ideia?",
+    options: ["Um instrumento desafinado sem relacao entre as cordas.", "Uma lira afinada pela tensao correta das cordas.", "Um objeto parado para sempre.", "Uma cidade sem qualquer diferenca entre as pessoas."],
+    answer: 1,
+    reward: 25
   },
   {
     id: "templo-entrada",
@@ -177,7 +223,7 @@ const stations = [
   {
     id: "forca-logos",
     phase: 4,
-    x: 560,
+    x: 500,
     y: 220,
     kind: "hangman",
     label: "Forca",
@@ -188,9 +234,25 @@ const stations = [
     reward: 35
   },
   {
+    id: "logos-vf",
+    phase: 4,
+    x: 740,
+    y: 360,
+    kind: "tf",
+    label: "Verdadeiro ou falso",
+    title: "O logos organiza a mudanca",
+    text: "Antes da sintese final, confira se a ideia de logos ficou clara.",
+    items: [
+      { text: "Logos pode ser entendido como uma razao ou ordem do mundo.", answer: true },
+      { text: "Para Heraclito, mudanca e necessariamente ausencia total de sentido.", answer: false },
+      { text: "O pensamento filosofico tenta compreender a ordem presente no movimento.", answer: true }
+    ],
+    reward: 30
+  },
+  {
     id: "sintese",
     phase: 4,
-    x: 900,
+    x: 950,
     y: 390,
     kind: "choice",
     label: "Questao final",
@@ -200,6 +262,19 @@ const stations = [
     options: ["Tudo permanece igual porque a razao impede a mudanca.", "Tudo flui, os opostos se tensionam e o logos da ordem ao movimento.", "A realidade e caos absoluto e nao pode ser compreendida.", "Os sentidos mostram apenas uma imobilidade perfeita."],
     answer: 1,
     reward: 40
+  },
+  {
+    id: "reflexao-final",
+    phase: 4,
+    x: 1110,
+    y: 230,
+    kind: "reflection",
+    label: "Reflexao",
+    title: "O que mudou em sua leitura do mundo?",
+    text: "Escreva uma resposta breve conectando pelo menos duas ideias da aula: fluxo, opostos ou logos.",
+    prompt: "Explique com suas palavras uma situacao da vida em que algo muda, mas ainda parece ter uma ordem.",
+    minLength: 80,
+    reward: 35
   }
 ];
 
@@ -210,6 +285,7 @@ let score = 100;
 let acertos = 0;
 let erros = 0;
 let startTime = 0;
+let elapsedTimer = null;
 let activeStation = null;
 let details = [];
 let keys = {};
@@ -251,6 +327,7 @@ ui.startBtn.addEventListener("click", () => {
   started = true;
   paused = false;
   startTime = Date.now();
+  elapsedTimer = setInterval(updateElapsed, 1000);
   updateHUD();
 });
 
@@ -279,6 +356,7 @@ function updateHUD() {
   const completed = stations.filter(station => station.done).length;
   const station = nextStation();
   const state = states[Math.min(player.power, states.length - 1)];
+  const progress = Math.round((completed / stations.length) * 100);
 
   ui.phaseTitle.textContent = phase.title;
   ui.phaseProgress.textContent = `Estacao ${Math.min(completed + 1, stations.length)} de ${stations.length}`;
@@ -289,6 +367,33 @@ function updateHUD() {
   ui.erros.textContent = erros;
   ui.missionTitle.textContent = station ? station.title : "Jornada concluida";
   ui.missionText.textContent = station ? `${phase.mission} Proximo marco: ${station.label}.` : "Salve o resultado e volte ao painel.";
+  ui.progressText.textContent = `${progress}%`;
+  ui.progressFill.style.width = `${progress}%`;
+  renderPhaseMap();
+  updateElapsed();
+}
+
+function updateElapsed() {
+  if (!startTime || !ui.elapsed) return;
+  const seconds = Math.max(0, Math.round((Date.now() - startTime) / 1000));
+  const minutes = String(Math.floor(seconds / 60)).padStart(2, "0");
+  const rest = String(seconds % 60).padStart(2, "0");
+  ui.elapsed.textContent = `${minutes}:${rest}`;
+}
+
+function renderPhaseMap() {
+  if (!ui.phaseMap) return;
+  const currentId = currentPhaseId();
+  ui.phaseMap.innerHTML = "";
+  phases.forEach(phase => {
+    const phaseTotal = stations.filter(station => station.phase === phase.id).length;
+    const phaseDone = stations.filter(station => station.phase === phase.id && station.done).length;
+    const item = document.createElement("li");
+    if (phaseDone === phaseTotal) item.className = "done";
+    else if (phase.id === currentId) item.className = "current";
+    item.innerHTML = `<span>${phase.title}</span><strong>${phaseDone}/${phaseTotal}</strong>`;
+    ui.phaseMap.appendChild(item);
+  });
 }
 
 function movePlayer() {
@@ -336,7 +441,9 @@ function openStation(station) {
     tf: renderTrueFalse,
     match: renderMatch,
     wordsearch: renderWordSearch,
-    hangman: renderHangman
+    hangman: renderHangman,
+    order: renderOrder,
+    reflection: renderReflection
   };
   handlers[station.kind](station);
 }
@@ -532,7 +639,63 @@ function renderHangman(station) {
   refresh();
 }
 
-function completeStation(station, correct, message) {
+function renderOrder(station) {
+  const prompt = document.createElement("p");
+  prompt.textContent = station.prompt;
+  const slots = document.createElement("div");
+  slots.className = "order-slots";
+  const options = document.createElement("div");
+  options.className = "order-list";
+  const selected = [];
+  const shuffled = [...station.items].sort(() => Math.random() - .5);
+
+  shuffled.forEach(item => {
+    const button = document.createElement("button");
+    button.className = "order-btn";
+    button.textContent = item;
+    button.onclick = () => {
+      selected.push(item);
+      button.disabled = true;
+      const pill = document.createElement("span");
+      pill.className = "order-pill";
+      pill.textContent = `${selected.length}. ${item}`;
+      slots.appendChild(pill);
+    };
+    options.appendChild(button);
+  });
+
+  ui.activityBody.append(prompt, slots, options);
+  ui.activityPrimary.textContent = "Conferir sequencia";
+  ui.activityPrimary.onclick = () => {
+    if (selected.length < station.answer.length) {
+      ui.activityMsg.textContent = "Complete todos os blocos antes de conferir.";
+      return;
+    }
+    const correct = station.answer.every((item, index) => selected[index] === item);
+    completeStation(station, correct, correct ? "Sequencia coerente." : "A sequencia nao ficou ideal, mas a ideia foi registrada.", selected.join(" > "));
+  };
+}
+
+function renderReflection(station) {
+  const prompt = document.createElement("p");
+  prompt.textContent = station.prompt;
+  const textarea = document.createElement("textarea");
+  textarea.className = "reflection-box";
+  textarea.placeholder = "Escreva sua reflexao aqui...";
+  ui.activityBody.append(prompt, textarea);
+  ui.activityPrimary.textContent = "Registrar reflexao";
+  ui.activityPrimary.onclick = () => {
+    const answer = textarea.value.trim();
+    if (answer.length < station.minLength) {
+      ui.activityMsg.textContent = `Escreva um pouco mais para registrar sua reflexao. Minimo: ${station.minLength} caracteres.`;
+      return;
+    }
+    const hasConcept = ["fluxo", "opostos", "logos", "mudanca", "ordem"].some(term => answer.toLowerCase().includes(term));
+    completeStation(station, hasConcept, hasConcept ? "Reflexao registrada com conceito filosofico." : "Reflexao registrada. Tente citar fluxo, opostos ou logos na proxima vez.", answer);
+  };
+}
+
+function completeStation(station, correct, message, resposta = message) {
   if (station.done) return;
   station.done = true;
   details.push({
@@ -540,7 +703,7 @@ function completeStation(station, correct, message) {
     tipo: station.kind,
     pergunta: station.title,
     acertou: correct,
-    resposta: message
+    resposta
   });
   if (correct) {
     acertos++;
@@ -579,11 +742,12 @@ function closeActivity() {
 function openFinal() {
   if (paused && activeStation) return;
   paused = true;
+  updateElapsed();
   ui.modal.classList.remove("hidden");
   ui.activityKind.textContent = "Conclusao";
   ui.activityTitle.textContent = "A jornada filosofica foi concluida";
   ui.activityText.textContent = "Voce percorreu as ideias centrais de Heraclito: o fluxo da realidade, a tensao dos opostos e o logos como ordem racional do movimento.";
-  ui.activityBody.innerHTML = `<div class="activity-text">Pontuacao final: ${Math.max(0, Math.round(score))}\nAcertos: ${acertos}\nErros: ${erros}</div>`;
+  ui.activityBody.innerHTML = `<div class="activity-text">Pontuacao final: ${Math.max(0, Math.round(score))}\nAcertos: ${acertos}\nErros: ${erros}\nTempo de aula: ${ui.elapsed.textContent}</div>`;
   ui.activityMsg.textContent = "";
   ui.activityPrimary.classList.remove("hidden");
   ui.activityPrimary.textContent = "Salvar resultado";
@@ -594,6 +758,7 @@ function openFinal() {
 
 async function finishGame() {
   paused = true;
+  if (elapsedTimer) clearInterval(elapsedTimer);
   const tempoSegundos = Math.round((Date.now() - startTime) / 1000);
   ui.activityPrimary.disabled = true;
   ui.activityTitle.textContent = "Salvando resultado";
@@ -775,7 +940,8 @@ function drawStations() {
   if (!station) return;
   ctx.save();
   ctx.translate(station.x, station.y);
-  const colors = { reading: "#66c5d6", choice: "#e7b84a", tf: "#e7b84a", match: "#c45f3b", wordsearch: "#c45f3b", hangman: "#c45f3b" };
+  const colors = { reading: "#66c5d6", choice: "#e7b84a", tf: "#e7b84a", match: "#c45f3b", wordsearch: "#c45f3b", hangman: "#c45f3b", order: "#9cc36a", reflection: "#d39be5" };
+  const symbols = { reading: "L", choice: "?", tf: "V", match: "A", wordsearch: "C", hangman: "F", order: "S", reflection: "R" };
   ctx.shadowColor = colors[station.kind];
   ctx.shadowBlur = 22 + Math.sin(t * 3) * 5;
   ctx.fillStyle = colors[station.kind];
@@ -786,7 +952,7 @@ function drawStations() {
   ctx.fillStyle = "#fff8e8";
   ctx.font = "900 22px Arial";
   ctx.textAlign = "center";
-  ctx.fillText(station.kind === "reading" ? "L" : station.kind === "hangman" ? "F" : "?", 0, 8);
+  ctx.fillText(symbols[station.kind] || "?", 0, 8);
   ctx.restore();
 }
 
