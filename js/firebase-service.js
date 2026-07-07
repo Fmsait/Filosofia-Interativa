@@ -33,8 +33,8 @@ export async function sair() {
   await signOut(auth);
 }
 
-export function resultadoRef(uid, gameId = GAME_ID_HERACLITO) {
-  return doc(db, "resultados", `${gameId}_${uid}`);
+export function resultadoRef(uid) {
+  return doc(db, "resultados_heraclito", uid);
 }
 
 export async function buscarResultado(uid, gameId = GAME_ID_HERACLITO) {
