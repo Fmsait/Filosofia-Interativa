@@ -1,4 +1,4 @@
-import { observarUsuario, buscarResultado, salvarResultadoHeraclito } from "../../js/firebase-service.js";
+import { observarUsuario, buscarResultado, salvarResultadoHeraclito } from "./firebase-service.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
