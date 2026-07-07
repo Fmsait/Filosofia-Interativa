@@ -28,7 +28,7 @@
       <div class="hud-block">
         <p class="eyebrow">Jornada</p>
         <h2 id="phaseTitle">Efeso</h2>
-        <span id="phaseProgress">Estacao 1 de 12</span>
+        <span id="phaseProgress">Estacao 1 de 16</span>
       </div>
       <div class="hud-block state">
         <strong id="estado">Viajante comum</strong>
@@ -37,6 +37,7 @@
       <div class="hud-block score">
         <span>Pontuacao <strong id="score">100</strong></span>
         <span>Acertos <strong id="acertos">0</strong> | Erros <strong id="erros">0</strong></span>
+        <span>Tempo <strong id="elapsed">00:00</strong></span>
       </div>
     </header>
 
@@ -50,6 +51,14 @@
           <span><i class="dot reading"></i>Leitura</span>
           <span><i class="dot challenge"></i>Questao</span>
           <span><i class="dot puzzle"></i>Miniatividade</span>
+        </div>
+        <div class="progress-card">
+          <div class="progress-head">
+            <span>Progresso da aula</span>
+            <strong id="progressText">0%</strong>
+          </div>
+          <div class="progress-track"><span id="progressFill"></span></div>
+          <ol id="phaseMap" class="phase-map"></ol>
         </div>
       </aside>
     </main>
