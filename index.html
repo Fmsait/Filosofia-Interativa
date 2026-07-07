@@ -3,35 +3,87 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Filosofia Interativa — Login</title>
-  <style>
-    body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff}
-    .card{width:min(520px,92vw);background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);border-radius:24px;padding:32px;box-shadow:0 24px 70px rgba(0,0,0,.35);text-align:center}
-    h1{font-size:38px;margin:0 0 8px}.sub{opacity:.9;font-size:18px;line-height:1.45}.btn{margin-top:26px;border:0;border-radius:16px;padding:16px 22px;font-weight:700;font-size:17px;cursor:pointer;background:#f7c948;color:#1f2937}.btn:hover{filter:brightness(1.05)}.status{margin-top:18px;color:#e5e7eb}
-  </style>
+  <title>Logos - Heraclito</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="card">
-    <h1>Filosofia Interativa</h1>
-    <p class="sub">Entre com sua conta Google para acessar a atividade gamificada de Heráclito.</p>
-    <button id="loginBtn" class="btn">Entrar com Google</button>
-    <div id="status" class="status"></div>
-  </main>
+  <section id="start" class="start-screen">
+    <div class="start-copy">
+      <p class="eyebrow">Filosofia Interativa</p>
+      <h1>Heraclito: o rio, os opostos e o logos</h1>
+      <p class="lead">
+        Uma aula-jogo de aproximadamente 50 minutos. Leia os fragmentos, atravesse o rio,
+        investigue os simbolos da Grecia Antiga e resolva desafios para concluir a jornada.
+      </p>
+      <div class="start-actions">
+        <button id="startBtn" class="btn primary">Iniciar aula-jogo</button>
+        <a class="btn ghost" href="../../painel.html">Voltar ao painel</a>
+      </div>
+      <p id="loginStatus" class="login-status">Verificando login...</p>
+    </div>
+  </section>
 
-  <script type="module">
-    import { entrarComGoogle, observarUsuario } from "./js/firebase-service.js";
-    const status = document.getElementById("status");
-    const loginBtn = document.getElementById("loginBtn");
+  <div id="gameWrap" class="game-wrap hidden">
+    <header class="hud">
+      <div class="hud-block">
+        <p class="eyebrow">Jornada</p>
+        <h2 id="phaseTitle">Efeso</h2>
+        <span id="phaseProgress">Estacao 1 de 16</span>
+      </div>
+      <div class="hud-block state">
+        <strong id="estado">Viajante comum</strong>
+        <span id="estadoTexto">Observa o mundo como algo fixo.</span>
+      </div>
+      <div class="hud-block score">
+        <span>Pontuacao <strong id="score">100</strong></span>
+        <span>Acertos <strong id="acertos">0</strong> | Erros <strong id="erros">0</strong></span>
+        <span>Tempo <strong id="elapsed">00:00</strong></span>
+      </div>
+    </header>
 
-    observarUsuario(user => {
-      if (user) location.href = "painel.html";
-    });
+    <main class="stage">
+      <canvas id="game" width="1280" height="640"></canvas>
+      <aside class="mission-panel">
+        <p class="eyebrow">Objetivo atual</p>
+        <h3 id="missionTitle">Chegue ao primeiro marco</h3>
+        <p id="missionText">Use as setas ou WASD para caminhar. Toque nos marcos luminosos para abrir leituras e desafios.</p>
+        <div class="legend">
+          <span><i class="dot reading"></i>Leitura</span>
+          <span><i class="dot challenge"></i>Questao</span>
+          <span><i class="dot puzzle"></i>Miniatividade</span>
+        </div>
+        <div class="progress-card">
+          <div class="progress-head">
+            <span>Progresso da aula</span>
+            <strong id="progressText">0%</strong>
+          </div>
+          <div class="progress-track"><span id="progressFill"></span></div>
+          <ol id="phaseMap" class="phase-map"></ol>
+        </div>
+      </aside>
+    </main>
 
-    loginBtn.addEventListener("click", async () => {
-      status.textContent = "Abrindo login...";
-      try { await entrarComGoogle(); }
-      catch (e) { status.textContent = "Não foi possível entrar. Verifique a configuração do Firebase."; console.error(e); }
-    });
-  </script>
+    <footer class="footer">
+      <span>Movimento: setas ou WASD</span>
+      <span>Aproxime-se dos marcos luminosos</span>
+      <span>Conclua todas as estacoes para registrar o resultado</span>
+    </footer>
+  </div>
+
+  <div id="activityModal" class="modal hidden" aria-live="polite">
+    <section class="activity">
+      <p id="activityKind" class="eyebrow">Leitura</p>
+      <h2 id="activityTitle"></h2>
+      <div id="activityText" class="activity-text"></div>
+      <div id="activityBody" class="activity-body"></div>
+      <p id="activityMsg" class="activity-msg"></p>
+      <div class="activity-actions">
+        <button id="activityPrimary" class="btn primary">Continuar</button>
+        <button id="activitySecondary" class="btn ghost hidden">Fechar</button>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="game.js"></script>
 </body>
 </html>
