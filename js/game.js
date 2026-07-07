@@ -302,7 +302,7 @@ window.addEventListener("keyup", event => { keys[event.key.toLowerCase()] = fals
 
 observarUsuario(async currentUser => {
   if (!currentUser) {
-    location.href = "../../index.html";
+    location.href = "index.html";
     return;
   }
   user = currentUser;
@@ -778,7 +778,7 @@ async function finishGame() {
     ui.activityText.textContent = `Pontuacao final: ${Math.max(0, Math.round(score))}. Acertos: ${acertos}. Erros: ${erros}.`;
     ui.activityPrimary.textContent = "Voltar ao painel";
     ui.activityPrimary.disabled = false;
-    ui.activityPrimary.onclick = () => { location.href = "../../painel.html"; };
+    ui.activityPrimary.onclick = () => { location.href = "painel.html"; };
   } catch (error) {
     ui.activityTitle.textContent = "Nao foi possivel salvar";
     ui.activityText.textContent = error.message || "Verifique a conexao e tente novamente.";
