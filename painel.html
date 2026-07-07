@@ -3,18 +3,142 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Painel do Aluno — Filosofia Interativa</title>
+  <title>Painel do Aluno - Filosofia Interativa</title>
   <style>
-    body{margin:0;min-height:100vh;font-family:Arial,sans-serif;background:#eef5f7;color:#0f172a}.top{background:#0f2f4a;color:white;padding:22px 7vw;display:flex;justify-content:space-between;gap:16px;align-items:center}.top h1{margin:0;font-size:28px}.wrap{max-width:960px;margin:34px auto;padding:0 20px}.card{background:white;border-radius:22px;padding:26px;box-shadow:0 16px 40px rgba(15,47,74,.12);border:1px solid #dbeafe}.game{display:flex;justify-content:space-between;gap:20px;align-items:center}.title{font-size:25px;font-weight:800;margin-bottom:8px}.desc{color:#475569;line-height:1.45}.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;cursor:pointer;background:#0ea5e9;color:white;text-decoration:none;display:inline-block}.btn.off{background:#94a3b8;cursor:not-allowed}.sair{background:transparent;color:white;border:1px solid rgba(255,255,255,.5);border-radius:12px;padding:10px 14px;cursor:pointer}.small{color:#64748b;margin-top:12px}
+    :root{
+      --ink:#142033;
+      --muted:#5b6a7f;
+      --nav:#11344f;
+      --sea:#176a7d;
+      --gold:#e7b84a;
+      --papyrus:#fff8e8;
+      --line:#d8e3ee;
+      --disabled:#95a4b8;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Arial,Helvetica,sans-serif;
+      color:var(--ink);
+      background:linear-gradient(180deg,#eef7f7,#e8f0f4);
+    }
+    .top{
+      min-height:92px;
+      padding:20px 7vw;
+      display:flex;
+      justify-content:space-between;
+      gap:18px;
+      align-items:center;
+      color:#fff8e8;
+      background:linear-gradient(90deg,#102c45,#16445c);
+      border-bottom:3px solid rgba(231,184,74,.4);
+    }
+    .top h1{margin:0;font-size:30px;line-height:1}
+    #aluno{margin-top:7px;color:#dcebf2}
+    .sair{
+      min-width:58px;
+      min-height:42px;
+      border:1px solid rgba(255,255,255,.55);
+      border-radius:8px;
+      color:white;
+      background:transparent;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .wrap{
+      width:min(1050px,92vw);
+      margin:34px auto;
+    }
+    .card{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:24px;
+      align-items:center;
+      padding:28px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:white;
+      box-shadow:0 18px 48px rgba(17,52,79,.12);
+    }
+    .eyebrow{
+      margin:0 0 8px;
+      color:var(--sea);
+      font-size:12px;
+      font-weight:900;
+      text-transform:uppercase;
+    }
+    .title{font-size:28px;font-weight:900;margin-bottom:8px}
+    .desc{max-width:680px;color:#34475d;line-height:1.5}
+    .meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin:16px 0 0;
+    }
+    .tag{
+      min-height:30px;
+      display:inline-flex;
+      align-items:center;
+      border-radius:999px;
+      padding:6px 10px;
+      color:#28384a;
+      background:#eef5f7;
+      font-size:13px;
+      font-weight:800;
+    }
+    .small{color:var(--muted);margin-top:14px}
+    .btn{
+      min-width:148px;
+      min-height:52px;
+      border:0;
+      border-radius:8px;
+      padding:15px 20px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      color:#172033;
+      background:var(--gold);
+      cursor:pointer;
+      font-weight:900;
+      font-size:16px;
+      text-decoration:none;
+    }
+    .btn.off{
+      color:white;
+      background:var(--disabled);
+      cursor:not-allowed;
+    }
+    @media (max-width:760px){
+      .top{align-items:flex-start}
+      .card{grid-template-columns:1fr}
+      .btn{width:100%}
+    }
   </style>
 </head>
 <body>
-  <header class="top"><div><h1>Filosofia Interativa</h1><div id="aluno">Carregando...</div></div><button id="sair" class="sair">Sair</button></header>
+  <header class="top">
+    <div>
+      <h1>Filosofia Interativa</h1>
+      <div id="aluno">Carregando...</div>
+    </div>
+    <button id="sair" class="sair">Sair</button>
+  </header>
+
   <main class="wrap">
-    <section class="card game">
+    <section class="card">
       <div>
-        <div class="title">Heráclito — Logos e Movimento</div>
-        <div class="desc">Jogo didático sobre mudança, conflito dos opostos e logos.</div>
+        <p class="eyebrow">Aula-jogo</p>
+        <div class="title">Heraclito - Logos e Movimento</div>
+        <div class="desc">
+          Jornada interativa de aproximadamente 50 minutos sobre mudanca, rio, conflito dos opostos e logos,
+          com leitura guiada, desafios objetivos, miniatividades e reflexao final.
+        </div>
+        <div class="meta">
+          <span class="tag">16 estacoes</span>
+          <span class="tag">Tentativa unica</span>
+          <span class="tag">Resultado registrado</span>
+        </div>
         <div id="resultado" class="small">Verificando tentativa...</div>
       </div>
       <a id="jogar" class="btn off" href="#">Aguarde</a>
@@ -23,30 +147,44 @@
 
   <script type="module">
     import { observarUsuario, sair, buscarResultado } from "./js/firebase-service.js";
+
     const aluno = document.getElementById("aluno");
     const resultado = document.getElementById("resultado");
     const jogar = document.getElementById("jogar");
+
     document.getElementById("sair").onclick = sair;
 
+    function formatarTempo(segundos) {
+      if (!Number.isFinite(segundos)) return "";
+      const minutos = Math.floor(segundos / 60);
+      const resto = segundos % 60;
+      return ` Tempo: ${minutos}min ${resto}s.`;
+    }
+
     observarUsuario(async user => {
-      if (!user) { location.href = "index.html"; return; }
-      aluno.textContent = `${user.displayName || "Aluno"} — ${user.email || ""}`;
+      if (!user) {
+        location.href = "index.html";
+        return;
+      }
+
+      aluno.textContent = `${user.displayName || "Aluno"} - ${user.email || ""}`;
+
       try {
         const r = await buscarResultado(user.uid);
         if (r) {
-          resultado.textContent = `Atividade já realizada. Pontuação registrada: ${r.pontuacao}.`;
-          jogar.textContent = "Já realizada";
+          resultado.textContent = `Atividade ja realizada. Pontuacao registrada: ${r.pontuacao}.${formatarTempo(r.tempoSegundos)}`;
+          jogar.textContent = "Ja realizada";
           jogar.classList.add("off");
           jogar.removeAttribute("href");
         } else {
-          resultado.textContent = "Atividade disponível. Você terá apenas uma tentativa.";
-          jogar.textContent = "Jogar";
+          resultado.textContent = "Atividade disponivel. Voce tera apenas uma tentativa.";
+          jogar.textContent = "Iniciar aula-jogo";
           jogar.classList.remove("off");
           jogar.href = "jogos/heraclito/index.html";
         }
-      } catch(e) {
-        resultado.textContent = "Erro ao verificar a tentativa. Confira o Firebase.";
-        console.error(e);
+      } catch(error) {
+        resultado.textContent = "Erro ao verificar a tentativa. Confira as permissoes do Firebase.";
+        console.error(error);
       }
     });
   </script>
