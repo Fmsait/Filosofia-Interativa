@@ -25,28 +25,61 @@
 
   <div id="gameWrap" class="game-wrap hidden">
     <header class="hud">
-      <div class="hud-block">
-        <p class="eyebrow">Jornada</p>
-        <h2 id="phaseTitle">Efeso</h2>
-        <span id="phaseProgress">Estacao 1 de 16</span>
+      <div class="brand-panel">
+        <div class="owl-mark" aria-hidden="true">&#9673;</div>
+        <div>
+          <strong>Filosofia</strong>
+          <span>Interativa</span>
+        </div>
       </div>
-      <div class="hud-block state">
-        <strong id="estado">Viajante comum</strong>
-        <span id="estadoTexto">Observa o mundo como algo fixo.</span>
+      <div class="title-panel">
+        <h2>HERACLITO</h2>
+        <span>Logos e Movimento</span>
       </div>
-      <div class="hud-block score">
-        <span>Pontuacao <strong id="score">100</strong></span>
-        <span>Acertos <strong id="acertos">0</strong> | Erros <strong id="erros">0</strong></span>
-        <span>Tempo <strong id="elapsed">00:00</strong></span>
+      <div class="player-card">
+        <div class="avatar" aria-hidden="true">H</div>
+        <div>
+          <span id="playerName" class="player-name">Jovem viajante</span>
+          <strong id="estado">Viajante comum</strong>
+          <span id="estadoTexto">Observa o mundo como algo fixo.</span>
+        </div>
+        <div class="xp-track" aria-label="Progresso da jornada"><span id="xpFill"></span></div>
       </div>
     </header>
 
     <main class="stage">
-      <canvas id="game" width="1280" height="640"></canvas>
+      <aside class="nav-panel">
+        <button class="nav-item active" type="button"><span class="nav-icon">&#9633;</span>Mapa da jornada</button>
+        <button class="nav-item" type="button"><span class="nav-icon">&#9998;</span>Diario do filosofo</button>
+        <button class="nav-item" type="button"><span class="nav-icon">&#928;</span>Conceitos aprendidos</button>
+        <button class="nav-item" type="button"><span class="nav-icon">&#9733;</span>Fragmentos coletados</button>
+        <button class="nav-item" type="button"><span class="nav-icon">?</span>Ajuda</button>
+        <div class="amphora"></div>
+      </aside>
+
+      <section class="map-area">
+        <div class="map-banner">
+          <div>
+            <p class="eyebrow">Jornada atual</p>
+            <h3 id="phaseTitle">Efeso</h3>
+          </div>
+          <span id="phaseProgress">Estacao 1 de 16</span>
+        </div>
+        <div class="map-instruction">Use as setas ou WASD para caminhar ate o marco luminoso.</div>
+        <canvas id="game" width="1280" height="640"></canvas>
+      </section>
+
       <aside class="mission-panel">
-        <p class="eyebrow">Objetivo atual</p>
-        <h3 id="missionTitle">Chegue ao primeiro marco</h3>
-        <p id="missionText">Use as setas ou WASD para caminhar. Toque nos marcos luminosos para abrir leituras e desafios.</p>
+        <section class="concept-card">
+          <p class="eyebrow">Conceito atual</p>
+          <div class="concept-icon" aria-hidden="true">&#9830;</div>
+          <strong id="estadoResumo">Fluxo</strong>
+          <p id="missionText">Use as setas ou WASD para caminhar. Toque nos marcos luminosos para abrir leituras e desafios.</p>
+        </section>
+        <section class="scroll-card">
+          <p class="eyebrow">Objetivo atual</p>
+          <h3 id="missionTitle">Chegue ao primeiro marco</h3>
+        </section>
         <div class="legend">
           <span><i class="dot reading"></i>Leitura</span>
           <span><i class="dot challenge"></i>Questao</span>
@@ -64,9 +97,27 @@
     </main>
 
     <footer class="footer">
-      <span>Movimento: setas ou WASD</span>
-      <span>Aproxime-se dos marcos luminosos</span>
-      <span>Conclua todas as estacoes para registrar o resultado</span>
+      <div class="metric">
+        <i class="metric-icon">&#8987;</i>
+        <span>Tempo de jogo</span>
+        <strong id="elapsed">00:00</strong>
+      </div>
+      <div class="metric">
+        <i class="metric-icon">&#10087;</i>
+        <span>Pontuacao</span>
+        <strong id="score">100</strong>
+      </div>
+      <div class="metric">
+        <i class="metric-icon">&#9678;</i>
+        <span>Acertos</span>
+        <strong id="acertos">0</strong>
+      </div>
+      <div class="metric">
+        <i class="metric-icon">&#10006;</i>
+        <span>Erros</span>
+        <strong id="erros">0</strong>
+      </div>
+      <div class="footer-note">Conclua as estacoes para registrar o resultado.</div>
     </footer>
   </div>
 
