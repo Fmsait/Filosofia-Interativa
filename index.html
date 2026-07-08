@@ -7,7 +7,18 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <section id="start" class="start-screen">
+  <section id="loginScreen" class="login-screen">
+    <main class="login-card">
+      <div class="login-emblem" aria-hidden="true">&#9673;</div>
+      <p class="eyebrow">Filosofia Interativa</p>
+      <h1>Entre na jornada</h1>
+      <p>Use sua conta Google para acessar a aula-jogo de Heraclito.</p>
+      <button id="loginBtn" class="btn primary">Entrar com Google</button>
+      <p id="authStatus" class="login-status">Verificando sessao...</p>
+    </main>
+  </section>
+
+  <section id="start" class="start-screen hidden">
     <div class="start-copy">
       <p class="eyebrow">Filosofia Interativa</p>
       <h1>Heraclito: o rio, os opostos e o logos</h1>
@@ -19,7 +30,7 @@
         <button id="startBtn" class="btn primary" disabled>Iniciar aula-jogo</button>
         <a class="btn ghost" href="painel.html">Voltar ao painel</a>
       </div>
-      <p id="loginStatus" class="login-status">Verificando login...</p>
+      <p id="loginStatus" class="login-status"></p>
     </div>
   </section>
 
