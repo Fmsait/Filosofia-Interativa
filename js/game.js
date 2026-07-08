@@ -1,9 +1,17 @@
-import { observarUsuario, buscarResultado, salvarResultadoHeraclito } from "./firebase-service.js";
+import {
+  entrarComGoogle,
+  observarUsuario,
+  buscarResultado,
+  salvarResultadoHeraclito
+} from "./firebase-service.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 const ui = {
+  loginScreen: document.getElementById("loginScreen"),
+  loginBtn: document.getElementById("loginBtn"),
+  authStatus: document.getElementById("authStatus"),
   start: document.getElementById("start"),
   startBtn: document.getElementById("startBtn"),
   loginStatus: document.getElementById("loginStatus"),
@@ -305,11 +313,15 @@ window.addEventListener("keyup", event => { keys[event.key.toLowerCase()] = fals
 observarUsuario(async currentUser => {
   if (!currentUser) {
     user = null;
+    ui.loginScreen.classList.remove("hidden");
+    ui.start.classList.add("hidden");
     ui.startBtn.disabled = true;
-    ui.loginStatus.textContent = "Sessao nao encontrada. Volte ao painel e entre novamente.";
+    ui.authStatus.textContent = "Entre para continuar.";
     return;
   }
   user = currentUser;
+  ui.loginScreen.classList.add("hidden");
+  ui.start.classList.remove("hidden");
   ui.startBtn.disabled = false;
   ui.startBtn.textContent = "Iniciar aula-jogo";
   ui.playerName.textContent = currentUser.displayName || currentUser.email || "Jovem viajante";
@@ -323,6 +335,18 @@ observarUsuario(async currentUser => {
     }
   } catch (error) {
     ui.loginStatus.textContent = "Login confirmado. Nao foi possivel verificar tentativa anterior agora.";
+    console.error(error);
+  }
+});
+
+ui.loginBtn.addEventListener("click", async () => {
+  ui.loginBtn.disabled = true;
+  ui.authStatus.textContent = "Abrindo login do Google...";
+  try {
+    await entrarComGoogle();
+  } catch (error) {
+    ui.authStatus.textContent = "Nao foi possivel entrar. Tente novamente.";
+    ui.loginBtn.disabled = false;
     console.error(error);
   }
 });
