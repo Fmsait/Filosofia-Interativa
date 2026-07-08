@@ -12,6 +12,8 @@ const ui = {
   phaseProgress: document.getElementById("phaseProgress"),
   estado: document.getElementById("estado"),
   estadoTexto: document.getElementById("estadoTexto"),
+  playerName: document.getElementById("playerName"),
+  xpFill: document.getElementById("xpFill"),
   score: document.getElementById("score"),
   acertos: document.getElementById("acertos"),
   erros: document.getElementById("erros"),
@@ -306,6 +308,7 @@ observarUsuario(async currentUser => {
     return;
   }
   user = currentUser;
+  ui.playerName.textContent = currentUser.displayName || currentUser.email || "Jovem viajante";
   ui.loginStatus.textContent = `Aluno: ${currentUser.displayName || currentUser.email}`;
   try {
     const resultado = await buscarResultado(currentUser.uid);
@@ -369,6 +372,7 @@ function updateHUD() {
   ui.missionText.textContent = station ? `${phase.mission} Proximo marco: ${station.label}.` : "Salve o resultado e volte ao painel.";
   ui.progressText.textContent = `${progress}%`;
   ui.progressFill.style.width = `${progress}%`;
+  ui.xpFill.style.width = `${progress}%`;
   renderPhaseMap();
   updateElapsed();
 }
@@ -829,6 +833,7 @@ function drawScene() {
   else if (phase.area === "opposites") drawOppositesScene();
   else if (phase.area === "temple") drawTempleScene();
   else drawPolisScene();
+  drawJourneyPath();
   drawStations();
   drawPlayer();
   drawParticles();
@@ -836,13 +841,26 @@ function drawScene() {
 
 function drawPolisScene() {
   const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  sky.addColorStop(0, "#f5d598");
-  sky.addColorStop(1, "#d79662");
+  sky.addColorStop(0, "#79c2e5");
+  sky.addColorStop(.55, "#d9dcba");
+  sky.addColorStop(1, "#7b9b63");
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#b95e37";
-  ctx.fillRect(0, 430, canvas.width, 210);
-  drawColumns(780, 180, 7, "#f4ead8");
+  drawSun(1100, 95, 54);
+  drawHills("#67835e", 250, 45, 1.4);
+  drawHills("#426d58", 335, 60, 2.1);
+  ctx.fillStyle = "#2d8196";
+  ctx.fillRect(0, 470, canvas.width, 170);
+  drawWaterLines(475, 640, "rgba(255,255,255,.28)");
+  ctx.fillStyle = "#7d784c";
+  ctx.beginPath();
+  ctx.moveTo(0, 430);
+  ctx.bezierCurveTo(280, 380, 520, 535, 760, 445);
+  ctx.bezierCurveTo(980, 365, 1130, 410, 1280, 340);
+  ctx.lineTo(1280, 640);
+  ctx.lineTo(0, 640);
+  ctx.fill();
+  drawColumns(780, 175, 7, "#eee3c7");
   drawMarket();
 }
 
@@ -870,6 +888,8 @@ function drawRiverScene() {
     ctx.bezierCurveTo(430, y - 45, 650, y + 45, 1060, y - 15);
     ctx.stroke();
   }
+  drawColumns(16, 170, 2, "#e9ddbf");
+  drawColumns(1090, 190, 2, "#e9ddbf");
 }
 
 function drawOppositesScene() {
@@ -888,6 +908,11 @@ function drawOppositesScene() {
   ctx.fill();
   ctx.fillStyle = "#8c5334";
   ctx.fillRect(0, 430, canvas.width, 210);
+  drawSun(205, 120, 58);
+  ctx.fillStyle = "#d8e7f4";
+  ctx.beginPath();
+  ctx.arc(1035, 120, 55, .35, Math.PI * 1.65);
+  ctx.fill();
   drawColumns(510, 170, 4, "#f7e4bd");
   drawColumns(780, 170, 4, "#d2d9e5");
 }
@@ -900,11 +925,65 @@ function drawTempleScene() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#3b4656";
   ctx.fillRect(0, 440, canvas.width, 200);
+  drawHills("#17232e", 355, 70, 1.7);
   drawColumns(390, 120, 9, "#ece0c7");
   ctx.fillStyle = "#e7b84a";
   ctx.font = "700 58px Georgia,serif";
   ctx.textAlign = "center";
   ctx.fillText("LOGOS", canvas.width / 2, 100);
+}
+
+function drawSun(x, y, radius) {
+  const glow = ctx.createRadialGradient(x, y, 4, x, y, radius);
+  glow.addColorStop(0, "#fff8c7");
+  glow.addColorStop(.45, "#f5c85b");
+  glow.addColorStop(1, "rgba(245,200,91,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawHills(color, baseline, amplitude, frequency) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height);
+  ctx.lineTo(0, baseline);
+  for (let x = 0; x <= canvas.width; x += 32) {
+    const y = baseline - Math.sin(x / 170 * frequency) * amplitude - Math.cos(x / 91) * amplitude * .34;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(canvas.width, canvas.height);
+  ctx.fill();
+}
+
+function drawWaterLines(top, bottom, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  for (let y = top + 18; y < bottom; y += 22) {
+    ctx.beginPath();
+    for (let x = 0; x <= canvas.width; x += 40) {
+      const wave = y + Math.sin(x / 45 + t * 1.2) * 4;
+      if (x === 0) ctx.moveTo(x, wave);
+      else ctx.lineTo(x, wave);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawJourneyPath() {
+  const active = phaseStations().filter(station => !station.done);
+  if (!active.length) return;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,242,177,.86)";
+  ctx.lineWidth = 9;
+  ctx.lineCap = "round";
+  ctx.setLineDash([2, 28]);
+  ctx.beginPath();
+  ctx.moveTo(player.x, player.y);
+  active.forEach(station => ctx.lineTo(station.x, station.y));
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawColumns(x, y, count, color) {
@@ -946,13 +1025,29 @@ function drawStations() {
   ctx.shadowBlur = 22 + Math.sin(t * 3) * 5;
   ctx.fillStyle = colors[station.kind];
   ctx.beginPath();
-  ctx.arc(0, 0, 25 + Math.sin(t * 4) * 2, 0, Math.PI * 2);
+  ctx.arc(0, 0, 31 + Math.sin(t * 4) * 2, 0, Math.PI * 2);
   ctx.fill();
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "#102533";
+  ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#ffe39a";
+  ctx.stroke();
   ctx.shadowBlur = 0;
   ctx.fillStyle = "#fff8e8";
   ctx.font = "900 22px Arial";
   ctx.textAlign = "center";
   ctx.fillText(symbols[station.kind] || "?", 0, 8);
+  const label = `${station.id ? stations.indexOf(station) + 1 : ""}. ${station.title}`.toUpperCase();
+  ctx.font = "900 15px Georgia,serif";
+  const labelWidth = Math.min(265, Math.max(150, ctx.measureText(label).width + 30));
+  ctx.fillStyle = "rgba(244,218,164,.96)";
+  ctx.strokeStyle = "#70431d";
+  ctx.lineWidth = 3;
+  ctx.fillRect(-labelWidth / 2, 45, labelWidth, 42);
+  ctx.strokeRect(-labelWidth / 2, 45, labelWidth, 42);
+  ctx.fillStyle = "#25170c";
+  ctx.fillText(label, 0, 71, labelWidth - 18);
   ctx.restore();
 }
 
