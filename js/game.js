@@ -304,10 +304,14 @@ window.addEventListener("keyup", event => { keys[event.key.toLowerCase()] = fals
 
 observarUsuario(async currentUser => {
   if (!currentUser) {
-    location.href = "index.html";
+    user = null;
+    ui.startBtn.disabled = true;
+    ui.loginStatus.textContent = "Sessao nao encontrada. Volte ao painel e entre novamente.";
     return;
   }
   user = currentUser;
+  ui.startBtn.disabled = false;
+  ui.startBtn.textContent = "Iniciar aula-jogo";
   ui.playerName.textContent = currentUser.displayName || currentUser.email || "Jovem viajante";
   ui.loginStatus.textContent = `Aluno: ${currentUser.displayName || currentUser.email}`;
   try {
