@@ -302,7 +302,26 @@ let keys = {};
 let particles = [];
 let t = 0;
 
-const player = { x: 110, y: 330, r: 18, speed: 4.1, power: 0 };
+const player = {
+  x: 110,
+  y: 330,
+  r: 18,
+  speed: 4.1,
+  power: 0,
+  direction: "down",
+  moving: false,
+  walkFrame: 0
+};
+
+const TILE = 40;
+const polisProps = [
+  { type: "olive", x: 610, y: 470, scale: 1.05 },
+  { type: "olive", x: 720, y: 505, scale: .82 },
+  { type: "cypress", x: 1125, y: 325, scale: 1.08 },
+  { type: "cypress", x: 1175, y: 355, scale: .86 },
+  { type: "amphora", x: 540, y: 430, scale: .75 },
+  { type: "amphora", x: 1045, y: 425, scale: .65 }
+];
 
 window.addEventListener("keydown", event => {
   keys[event.key.toLowerCase()] = true;
@@ -434,12 +453,32 @@ function movePlayer() {
   const right = keys.arrowright || keys.d;
   const up = keys.arrowup || keys.w;
   const down = keys.arrowdown || keys.s;
-  if (left) player.x -= player.speed;
-  if (right) player.x += player.speed;
-  if (up) player.y -= player.speed;
-  if (down) player.y += player.speed;
+  let dx = 0;
+  let dy = 0;
+  if (left) { dx -= player.speed; player.direction = "left"; }
+  if (right) { dx += player.speed; player.direction = "right"; }
+  if (up) { dy -= player.speed; player.direction = "up"; }
+  if (down) { dy += player.speed; player.direction = "down"; }
+  if (dx && dy) {
+    dx *= .707;
+    dy *= .707;
+  }
+  player.moving = Boolean(dx || dy);
+  if (player.moving) player.walkFrame += .18;
+  const nextX = player.x + dx;
+  const nextY = player.y + dy;
+  if (!isWorldBlocked(nextX, player.y)) player.x = nextX;
+  if (!isWorldBlocked(player.x, nextY)) player.y = nextY;
   player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
   player.y = Math.max(player.r, Math.min(canvas.height - player.r, player.y));
+}
+
+function isWorldBlocked(x, y) {
+  if (currentPhase().area !== "polis") return false;
+  return polisProps.some(prop => {
+    const radius = prop.type === "amphora" ? 18 : 25;
+    return Math.hypot(x - prop.x, y - (prop.y + 12)) < player.r + radius * prop.scale;
+  });
 }
 
 function checkStations() {
@@ -877,19 +916,108 @@ function drawPolisScene() {
   drawSun(1100, 95, 54);
   drawHills("#67835e", 250, 45, 1.4);
   drawHills("#426d58", 335, 60, 2.1);
-  ctx.fillStyle = "#2d8196";
-  ctx.fillRect(0, 470, canvas.width, 170);
-  drawWaterLines(475, 640, "rgba(255,255,255,.28)");
-  ctx.fillStyle = "#7d784c";
-  ctx.beginPath();
-  ctx.moveTo(0, 430);
-  ctx.bezierCurveTo(280, 380, 520, 535, 760, 445);
-  ctx.bezierCurveTo(980, 365, 1130, 410, 1280, 340);
-  ctx.lineTo(1280, 640);
-  ctx.lineTo(0, 640);
-  ctx.fill();
+  drawPolisTilemap();
   drawColumns(780, 175, 7, "#eee3c7");
   drawMarket();
+  polisProps.forEach(drawWorldProp);
+}
+
+function tileNoise(col, row) {
+  const value = Math.sin(col * 91.17 + row * 37.43) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function drawPolisTilemap() {
+  const rows = Math.ceil(canvas.height / TILE);
+  const cols = Math.ceil(canvas.width / TILE);
+  for (let row = 8; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = col * TILE;
+      const y = row * TILE;
+      const shore = 11 + Math.round(Math.sin(col * .42) * 1.25);
+      if (row >= shore + 2) drawTile("water", x, y, col, row);
+      else if (row >= shore) drawTile("shore", x, y, col, row);
+      else if ((row === 9 || row === 10) && col > 3 && col < 27) drawTile("road", x, y, col, row);
+      else drawTile("grass", x, y, col, row);
+    }
+  }
+}
+
+function drawTile(type, x, y, col, row) {
+  const noise = tileNoise(col, row);
+  if (type === "water") {
+    ctx.fillStyle = noise > .5 ? "#247b91" : "#2f8799";
+    ctx.fillRect(x, y, TILE + 1, TILE + 1);
+    ctx.strokeStyle = "rgba(203,240,231,.32)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 5, y + 13 + Math.sin(t * 2 + col) * 2);
+    ctx.quadraticCurveTo(x + 20, y + 7, x + 35, y + 13);
+    ctx.stroke();
+    return;
+  }
+  if (type === "shore") {
+    ctx.fillStyle = noise > .5 ? "#c7a66c" : "#b9965d";
+    ctx.fillRect(x, y, TILE + 1, TILE + 1);
+    ctx.fillStyle = "rgba(92,72,43,.3)";
+    ctx.fillRect(x + 8 + noise * 18, y + 12, 3, 2);
+    return;
+  }
+  if (type === "road") {
+    ctx.fillStyle = noise > .5 ? "#a59068" : "#97845f";
+    ctx.fillRect(x, y, TILE + 1, TILE + 1);
+    ctx.strokeStyle = "rgba(67,54,37,.18)";
+    ctx.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+    return;
+  }
+  ctx.fillStyle = noise > .5 ? "#657a4e" : "#708356";
+  ctx.fillRect(x, y, TILE + 1, TILE + 1);
+  ctx.strokeStyle = "rgba(35,67,43,.16)";
+  ctx.beginPath();
+  ctx.moveTo(x + 8 + noise * 20, y + 29);
+  ctx.lineTo(x + 11 + noise * 20, y + 22);
+  ctx.stroke();
+}
+
+function drawWorldProp(prop) {
+  ctx.save();
+  ctx.translate(prop.x, prop.y);
+  ctx.scale(prop.scale, prop.scale);
+  ctx.fillStyle = "rgba(8,18,20,.24)";
+  ctx.beginPath();
+  ctx.ellipse(0, 24, 24, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  if (prop.type === "amphora") {
+    ctx.fillStyle = "#a95a25";
+    ctx.beginPath();
+    ctx.moveTo(-11, -16);
+    ctx.bezierCurveTo(-24, -2, -16, 25, 0, 31);
+    ctx.bezierCurveTo(16, 25, 24, -2, 11, -16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#4b2817";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = "#79502d";
+    ctx.fillRect(-5, -2, 10, 34);
+    ctx.fillStyle = prop.type === "cypress" ? "#234b38" : "#3f653d";
+    if (prop.type === "cypress") {
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.ellipse(0, -8 - i * 17, 14 - i * 2, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      for (let i = 0; i < 7; i++) {
+        const angle = i * Math.PI * 2 / 7;
+        ctx.beginPath();
+        ctx.arc(Math.cos(angle) * 15, -12 + Math.sin(angle) * 12, 15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  ctx.restore();
 }
 
 function drawRiverScene() {
@@ -1081,31 +1209,84 @@ function drawStations() {
 
 function drawPlayer() {
   ctx.save();
-  ctx.translate(player.x, player.y);
+  const stride = player.moving ? Math.sin(player.walkFrame * Math.PI) : 0;
+  const bob = player.moving ? Math.abs(stride) * 2 : Math.sin(t * 2) * .6;
+  const facing = player.direction === "left" ? -1 : 1;
+  ctx.translate(player.x, player.y - bob);
+  ctx.scale(facing * 1.18, 1.18);
   const glow = ["#ffffff", "#66c5d6", "#c45f3b", "#e7b84a"][Math.min(player.power, 3)];
+  ctx.fillStyle = "rgba(5,18,22,.3)";
+  ctx.beginPath();
+  ctx.ellipse(0, 43 + bob, 23 - Math.abs(stride) * 2, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
   ctx.shadowColor = glow;
   ctx.shadowBlur = player.power ? 18 : 0;
-  ctx.fillStyle = "#f4d7b0";
+
+  ctx.strokeStyle = "#3b261a";
+  ctx.lineWidth = 7;
+  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.arc(0, -22, 13, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = player.power >= 3 ? "#e7b84a" : "#f4ead8";
-  ctx.fillRect(-13, -8, 26, 42);
-  ctx.fillStyle = "#8d4b32";
-  ctx.fillRect(-16, 0, 32, 10);
-  ctx.strokeStyle = "#2a1c16";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(-13, 6);
-  ctx.lineTo(-28, 24);
-  ctx.moveTo(13, 6);
-  ctx.lineTo(28, 24);
-  ctx.moveTo(-8, 34);
-  ctx.lineTo(-18, 51);
-  ctx.moveTo(8, 34);
-  ctx.lineTo(18, 51);
+  ctx.moveTo(-7, 19);
+  ctx.lineTo(-10 - stride * 7, 42);
+  ctx.moveTo(7, 19);
+  ctx.lineTo(10 + stride * 7, 42);
   ctx.stroke();
+
+  ctx.fillStyle = player.power >= 3 ? "#e6ba4b" : "#eee2c9";
+  ctx.beginPath();
+  ctx.moveTo(-16, -7);
+  ctx.quadraticCurveTo(-19, 12, -13, 29);
+  ctx.lineTo(13, 29);
+  ctx.quadraticCurveTo(19, 12, 16, -7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#7b4a2a";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = "#9f4d2d";
+  ctx.fillRect(-17, 6, 34, 8);
+  ctx.fillStyle = "#e7bb57";
+  ctx.fillRect(-3, 6, 6, 8);
+
+  ctx.strokeStyle = "#5b3522";
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(-14, -2);
+  ctx.lineTo(-23 + stride * 5, 18);
+  ctx.moveTo(14, -2);
+  ctx.lineTo(23 - stride * 5, 18);
+  ctx.stroke();
+
+  ctx.fillStyle = "#d29a6e";
+  ctx.beginPath();
+  ctx.arc(0, -21, 14, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#2d211d";
+  ctx.beginPath();
+  ctx.arc(0, -25, 14, Math.PI, Math.PI * 2);
+  ctx.arc(-9, -22, 6, Math.PI * .55, Math.PI * 1.55);
+  ctx.fill();
+
+  if (player.direction !== "up") {
+    ctx.fillStyle = "#241a18";
+    ctx.beginPath();
+    ctx.arc(5, -21, 1.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#7c422c";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(7, -15, 4, .3, 1.65);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "#39261b";
+  ctx.fillRect(-18 - stride * 7, 39, 13, 6);
+  ctx.fillRect(5 + stride * 7, 39, 13, 6);
+
   if (player.power) {
+    ctx.scale(facing, 1);
     ctx.fillStyle = glow;
     for (let i = 0; i < player.power; i++) {
       const angle = t * 1.8 + i * Math.PI * 2 / player.power;
