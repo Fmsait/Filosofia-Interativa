@@ -337,6 +337,11 @@ const polisNpcs = [
   { role: "fisher", x: 1110, y: 505, direction: "left", bob: .35 }
 ];
 
+const riverRoute = [[150, 315], [235, 315], [470, 245], [720, 405], [980, 240], [1130, 330]];
+const riverStones = [
+  [235, 315], [350, 285], [470, 245], [590, 320], [720, 405], [850, 322], [980, 240], [1100, 310]
+];
+
 window.addEventListener("keydown", event => {
   keys[event.key.toLowerCase()] = true;
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) event.preventDefault();
@@ -489,11 +494,21 @@ function movePlayer() {
 
 function isWorldBlocked(x, y) {
   const area = currentPhase().area;
-  if (isTerrainBlocked(area, x, y)) return true;
+  if (isTerrainBlocked(area, x, y)) return !canEscapeBlockedTerrain(area, x, y);
   if (area !== "polis") return false;
   return polisProps.some(prop => {
     return isCircleBlocked(x, y, prop.x, prop.y + 14, player.r + prop.block * prop.scale);
   }) || polisNpcs.some(npc => isCircleBlocked(x, y, npc.x, npc.y + 16, player.r + 18));
+}
+
+function canEscapeBlockedTerrain(area, nextX, nextY) {
+  if (!isTerrainBlocked(area, player.x, player.y)) return false;
+  if (area === "river") {
+    return riverSafeDistance(nextX, nextY) < riverSafeDistance(player.x, player.y) + .1;
+  }
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  return Math.hypot(nextX - centerX, nextY - centerY) < Math.hypot(player.x - centerX, player.y - centerY);
 }
 
 function isCircleBlocked(nextX, nextY, obstacleX, obstacleY, radius) {
@@ -537,18 +552,25 @@ function isPolisTerrainBlocked(x, y) {
 }
 
 function isRiverTerrainBlocked(x, y) {
-  const bridgeBand = y > 292 && y < 338 && x > 180 && x < 1100;
-  const path = [[150, 315], [235, 315], [470, 245], [720, 405], [980, 240], [1130, 330]];
-  const onRoute = path.some((point, index) => {
+  const bridgeBand = y > 294 && y < 342 && x > 180 && x < 1100;
+  const onRoute = riverRoute.some((point, index) => {
     if (!index) return false;
-    return distanceToSegment(x, y, path[index - 1][0], path[index - 1][1], point[0], point[1]) < 54;
+    return distanceToSegment(x, y, riverRoute[index - 1][0], riverRoute[index - 1][1], point[0], point[1]) < 72;
   });
-  const steppingStones = [
-    [350, 410], [470, 360], [595, 310], [730, 285], [860, 330], [985, 390]
-  ];
-  const onStone = steppingStones.some(([sx, sy]) => Math.hypot(x - sx, y - sy) < 38);
+  const onStone = riverStones.some(([sx, sy]) => Math.hypot(x - sx, y - sy) < 56);
   if (bridgeBand || onRoute || onStone) return false;
   return x > 185 && x < canvas.width - 185;
+}
+
+function riverSafeDistance(x, y) {
+  if (x <= 185 || x >= canvas.width - 185) return 0;
+  const routeDistance = riverRoute.reduce((closest, point, index) => {
+    if (!index) return closest;
+    const distance = distanceToSegment(x, y, riverRoute[index - 1][0], riverRoute[index - 1][1], point[0], point[1]);
+    return Math.min(closest, distance);
+  }, Infinity);
+  const stoneDistance = riverStones.reduce((closest, [sx, sy]) => Math.min(closest, Math.hypot(x - sx, y - sy)), Infinity);
+  return Math.min(routeDistance - 72, stoneDistance - 56);
 }
 
 function distanceToSegment(px, py, ax, ay, bx, by) {
@@ -887,9 +909,32 @@ function closeActivity() {
   paused = false;
   const station = nextStation();
   if (station) {
-    player.x = Math.max(70, Math.min(canvas.width - 70, station.x - 130));
-    player.y = Math.max(70, Math.min(canvas.height - 70, station.y));
+    const spawn = findSafeSpawnNear(station);
+    player.x = spawn.x;
+    player.y = spawn.y;
   }
+}
+
+function findSafeSpawnNear(station) {
+  const offsets = [
+    [-125, 0], [-90, 58], [-90, -58], [-45, 78], [-45, -78],
+    [0, 88], [0, -88], [72, 58], [72, -58], [118, 0],
+    [-160, 0], [160, 0], [0, 125]
+  ];
+  for (const [dx, dy] of offsets) {
+    const x = Math.max(70, Math.min(canvas.width - 70, station.x + dx));
+    const y = Math.max(70, Math.min(canvas.height - 70, station.y + dy));
+    if (!isSpawnBlocked(x, y, station.phase)) return { x, y };
+  }
+  return { x: Math.max(70, Math.min(canvas.width - 70, station.x)), y: Math.max(70, Math.min(canvas.height - 70, station.y + 70)) };
+}
+
+function isSpawnBlocked(x, y, phaseId) {
+  const phase = phases.find(item => item.id === phaseId) || currentPhase();
+  if (isTerrainBlocked(phase.area, x, y)) return true;
+  if (phase.area !== "polis") return false;
+  return polisProps.some(prop => Math.hypot(x - prop.x, y - (prop.y + 14)) < player.r + prop.block * prop.scale)
+    || polisNpcs.some(npc => Math.hypot(x - npc.x, y - (npc.y + 16)) < player.r + 18);
 }
 
 function openFinal() {
@@ -1225,60 +1270,74 @@ function drawNpc(npc) {
 }
 
 function drawRiverScene() {
-  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  sky.addColorStop(0, "#d9ecf0");
-  sky.addColorStop(1, "#f1d19a");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#6f8a4c";
-  ctx.fillRect(0, 0, 190, canvas.height);
-  ctx.fillRect(canvas.width - 190, 0, 190, canvas.height);
-  const river = ctx.createLinearGradient(180, 0, canvas.width - 180, 0);
-  river.addColorStop(0, "#1f7f91");
-  river.addColorStop(.5, "#42b4c6");
-  river.addColorStop(1, "#166579");
-  ctx.fillStyle = river;
-  ctx.fillRect(185, 0, canvas.width - 370, canvas.height);
-  ctx.strokeStyle = "rgba(255,255,255,.35)";
-  ctx.lineWidth = 8;
-  for (let i = 0; i < 12; i++) {
-    ctx.beginPath();
-    const y = 50 + i * 52 + Math.sin(t + i) * 18;
-    ctx.moveTo(230, y);
-    ctx.bezierCurveTo(430, y - 45, 650, y + 45, 1060, y - 15);
-    ctx.stroke();
+  const rows = Math.ceil(canvas.height / TILE);
+  const cols = Math.ceil(canvas.width / TILE);
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = col * TILE;
+      const y = row * TILE;
+      const noise = tileNoise(col, row);
+      if (x < 170 || x > canvas.width - 202) {
+        drawTile(noise > .65 ? "garden" : "grass", x, y, col, row);
+      } else if (x < 214 || x > canvas.width - 246) {
+        drawTile("shore", x, y, col, row);
+      } else {
+        drawTile("water", x, y, col, row);
+      }
+    }
   }
-  drawColumns(16, 170, 2, "#e9ddbf");
-  drawColumns(1090, 190, 2, "#e9ddbf");
+  ctx.fillStyle = "rgba(37,67,48,.35)";
+  ctx.fillRect(0, 0, 170, canvas.height);
+  ctx.fillRect(canvas.width - 170, 0, 170, canvas.height);
+  drawRiverShrine(46, 260);
+  drawRiverShrine(1115, 260);
   drawRiverCrossing();
 }
 
 function drawRiverCrossing() {
-  const route = [[150, 315], [235, 315], [470, 245], [720, 405], [980, 240], [1130, 330]];
   ctx.save();
-  ctx.strokeStyle = "rgba(88,54,31,.5)";
-  ctx.lineWidth = 18;
+  ctx.strokeStyle = "rgba(238,215,161,.28)";
+  ctx.lineWidth = 80;
   ctx.lineCap = "round";
-  ctx.setLineDash([30, 38]);
   ctx.beginPath();
-  route.forEach(([x, y], index) => {
+  riverRoute.forEach(([x, y], index) => {
     if (index) ctx.lineTo(x, y);
     else ctx.moveTo(x, y);
   });
   ctx.stroke();
+  ctx.strokeStyle = "rgba(64,47,31,.58)";
+  ctx.lineWidth = 12;
+  ctx.setLineDash([22, 28]);
+  ctx.stroke();
   ctx.setLineDash([]);
-  route.forEach(([x, y], index) => {
-    if (!index || index === route.length - 1) return;
+  riverStones.forEach(([x, y], index) => {
     ctx.fillStyle = index % 2 ? "#c7b18b" : "#b6a07a";
     ctx.strokeStyle = "#5f4930";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.ellipse(x, y + 12, 35, 16, Math.sin(index) * .3, 0, Math.PI * 2);
+    ctx.ellipse(x, y + 10, 48, 24, Math.sin(index) * .28, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = "rgba(255,255,255,.16)";
-    ctx.fillRect(x - 14, y + 3, 18, 4);
+    ctx.fillRect(x - 20, y - 2, 24, 5);
   });
+  ctx.restore();
+}
+
+function drawRiverShrine(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = "rgba(0,0,0,.18)";
+  ctx.fillRect(-16, 120, 150, 20);
+  ctx.fillStyle = "#d8c9a7";
+  ctx.fillRect(0, 0, 112, 16);
+  ctx.fillRect(-8, 112, 128, 16);
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = "#efe2c3";
+    ctx.fillRect(12 + i * 36, 16, 14, 96);
+    ctx.fillStyle = "rgba(89,65,39,.24)";
+    ctx.fillRect(18 + i * 36, 16, 3, 96);
+  }
   ctx.restore();
 }
 
