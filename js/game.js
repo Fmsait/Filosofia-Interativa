@@ -201,7 +201,7 @@ const stations = [
     kind: "wordsearch",
     label: "Caca-palavras",
     title: "Palavras do patio",
-    text: "Encontre os conceitos escondidos. Clique em cada palavra da lista para revelar sua posicao no quadro.",
+    text: "Encontre os conceitos escondidos no quadro. Clique na primeira letra e depois na ultima letra de cada palavra encontrada.",
     words: ["LOGOS", "RIO", "FLUXO", "FOGO", "OPOSTOS"],
     reward: 35
   },
@@ -522,8 +522,8 @@ function isTerrainBlocked(area, x, y) {
   if (x < 24 || x > canvas.width - 24 || y < 24 || y > canvas.height - 24) return true;
   if (area === "polis") return isPolisTerrainBlocked(x, y);
   if (area === "river") return isRiverTerrainBlocked(x, y);
-  if (area === "opposites") return y < 235 || y > 575;
-  if (area === "temple") return y < 285 || y > 575 || (x > 360 && x < 980 && y < 405);
+  if (area === "opposites") return isOppositesTerrainBlocked(x, y);
+  if (area === "temple") return isTempleTerrainBlocked(x, y);
   return false;
 }
 
@@ -560,6 +560,17 @@ function isRiverTerrainBlocked(x, y) {
   const onStone = riverStones.some(([sx, sy]) => Math.hypot(x - sx, y - sy) < 56);
   if (bridgeBand || onRoute || onStone) return false;
   return x > 185 && x < canvas.width - 185;
+}
+
+function isOppositesTerrainBlocked(x, y) {
+  const centralTemple = x > 520 && x < 885 && y > 130 && y < 402;
+  return centralTemple;
+}
+
+function isTempleTerrainBlocked(x, y) {
+  const templeBody = x > 430 && x < 870 && y > 85 && y < 318;
+  const altar = x > 590 && x < 710 && y > 340 && y < 428;
+  return templeBody || altar;
 }
 
 function riverSafeDistance(x, y) {
@@ -663,12 +674,12 @@ function renderTrueFalse(station) {
     actions.className = "activity-actions";
     ["Verdadeiro", "Falso"].forEach((label, labelIndex) => {
       const button = document.createElement("button");
-      button.className = "btn ghost";
+      button.className = "tf-choice";
       button.textContent = label;
       button.onclick = () => {
         responses.set(index, labelIndex === 0);
-        row.querySelectorAll("button").forEach(itemButton => itemButton.classList.remove("primary"));
-        button.classList.add("primary");
+        row.querySelectorAll("button").forEach(itemButton => itemButton.classList.remove("selected"));
+        button.classList.add("selected");
       };
       actions.appendChild(button);
     });
@@ -737,37 +748,93 @@ function renderWordSearch(station) {
   layout.className = "word-layout";
   const gridEl = document.createElement("div");
   gridEl.className = "word-grid";
+  const foundWords = new Set();
+  let startCell = null;
   grid.letters.flat().forEach((letter, index) => {
-    const cell = document.createElement("span");
+    const cell = document.createElement("button");
+    const row = Math.floor(index / 12);
+    const col = index % 12;
     cell.className = "word-cell";
+    cell.type = "button";
     cell.textContent = letter;
     cell.dataset.index = String(index);
+    cell.dataset.row = String(row);
+    cell.dataset.col = String(col);
+    cell.onclick = () => handleWordCellClick(cell, row, col);
     gridEl.appendChild(cell);
   });
 
   const list = document.createElement("div");
   list.className = "word-list";
-  let found = 0;
   station.words.forEach(word => {
-    const button = document.createElement("button");
-    button.className = "word-chip";
-    button.textContent = word;
-    button.onclick = () => {
-      if (button.classList.contains("found")) return;
-      button.classList.add("found");
-      grid.positions[word].forEach(([row, col]) => {
-        const index = row * 12 + col;
-        gridEl.querySelector(`[data-index="${index}"]`).classList.add("hit");
-      });
-      found++;
-      if (found === station.words.length) completeStation(station, true, "Todos os conceitos foram encontrados.");
-    };
-    list.appendChild(button);
+    const item = document.createElement("span");
+    item.className = "word-chip";
+    item.textContent = word;
+    item.dataset.word = word;
+    list.appendChild(item);
   });
+
+  function clearSelection() {
+    gridEl.querySelectorAll(".word-cell.selected").forEach(cell => cell.classList.remove("selected"));
+    startCell = null;
+  }
+
+  function handleWordCellClick(cell, row, col) {
+    if (cell.classList.contains("hit")) return;
+    if (!startCell) {
+      startCell = { row, col, cell };
+      cell.classList.add("selected");
+      ui.activityMsg.textContent = "Agora clique na ultima letra da palavra.";
+      return;
+    }
+    const selected = getWordSelection(grid.letters, startCell.row, startCell.col, row, col);
+    const normal = selected.word;
+    const reversed = selected.word.split("").reverse().join("");
+    const match = station.words.find(word => !foundWords.has(word) && (word === normal || word === reversed));
+    if (!match) {
+      selected.cells.forEach(([r, c]) => {
+        const current = gridEl.querySelector(`[data-index="${r * 12 + c}"]`);
+        if (current) current.classList.add("wrong");
+      });
+      setTimeout(() => gridEl.querySelectorAll(".word-cell.wrong").forEach(item => item.classList.remove("wrong")), 420);
+      ui.activityMsg.textContent = "Essa selecao nao forma uma das palavras da lista.";
+      clearSelection();
+      return;
+    }
+    foundWords.add(match);
+    selected.cells.forEach(([r, c]) => {
+      const current = gridEl.querySelector(`[data-index="${r * 12 + c}"]`);
+      if (current) current.classList.add("hit");
+    });
+    const chip = list.querySelector(`[data-word="${match}"]`);
+    if (chip) chip.classList.add("found");
+    ui.activityMsg.textContent = `${match} encontrada.`;
+    clearSelection();
+    if (foundWords.size === station.words.length) completeStation(station, true, "Todos os conceitos foram encontrados no quadro.");
+  }
 
   layout.append(gridEl, list);
   ui.activityBody.appendChild(layout);
   ui.activityPrimary.classList.add("hidden");
+}
+
+function getWordSelection(letters, startRow, startCol, endRow, endCol) {
+  const rowDiff = endRow - startRow;
+  const colDiff = endCol - startCol;
+  const rowStep = Math.sign(rowDiff);
+  const colStep = Math.sign(colDiff);
+  const straight = rowDiff === 0 || colDiff === 0 || Math.abs(rowDiff) === Math.abs(colDiff);
+  if (!straight) return { word: "", cells: [[startRow, startCol], [endRow, endCol]] };
+  const length = Math.max(Math.abs(rowDiff), Math.abs(colDiff)) + 1;
+  const cells = [];
+  let word = "";
+  for (let i = 0; i < length; i++) {
+    const row = startRow + rowStep * i;
+    const col = startCol + colStep * i;
+    cells.push([row, col]);
+    word += letters[row]?.[col] || "";
+  }
+  return { word, cells };
 }
 
 function renderHangman(station) {
@@ -993,7 +1060,7 @@ function makeWordGrid(words) {
   const positions = {};
   const placements = {
     LOGOS: [0, 1, 0, 1],
-    RIO: [2, 2, 1, 0],
+    RIO: [2, 1, 0, 1],
     FLUXO: [4, 0, 0, 1],
     FOGO: [6, 7, 1, 0],
     OPOSTOS: [10, 3, 0, 1]
@@ -1096,6 +1163,22 @@ function drawTile(type, x, y, col, row) {
     ctx.fillStyle = noise > .55 ? "#7f9d52" : "#3f653d";
     ctx.fillRect(x + 8, y + 8, 8, 5);
     ctx.fillRect(x + 18, y + 20, 6, 4);
+    return;
+  }
+  if (type === "warmStone" || type === "coolStone" || type === "marble" || type === "darkMarble") {
+    const palettes = {
+      warmStone: ["#d7b46f", "#e4c686", "#b9894f"],
+      coolStone: ["#4d5f72", "#60758a", "#334456"],
+      marble: ["#d7ceb8", "#eee3c9", "#a99672"],
+      darkMarble: ["#223245", "#2f4156", "#121d2a"]
+    };
+    const [base, light, line] = palettes[type];
+    ctx.fillStyle = noise > .5 ? base : light;
+    ctx.fillRect(x, y, TILE + 1, TILE + 1);
+    ctx.strokeStyle = line;
+    ctx.globalAlpha = .28;
+    ctx.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
+    ctx.globalAlpha = 1;
     return;
   }
   if (type === "road") {
@@ -1342,44 +1425,141 @@ function drawRiverShrine(x, y) {
 }
 
 function drawOppositesScene() {
-  const split = canvas.width / 2;
-  ctx.fillStyle = "#f4d38b";
-  ctx.fillRect(0, 0, split, canvas.height);
-  ctx.fillStyle = "#172638";
-  ctx.fillRect(split, 0, split, canvas.height);
-  ctx.fillStyle = "#c45f3b";
+  const rows = Math.ceil(canvas.height / TILE);
+  const cols = Math.ceil(canvas.width / TILE);
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = col * TILE;
+      const y = row * TILE;
+      const type = col < cols / 2 ? "warmStone" : "coolStone";
+      drawTile(type, x, y, col, row);
+    }
+  }
+  ctx.fillStyle = "rgba(255,220,120,.18)";
+  ctx.fillRect(0, 0, canvas.width / 2, canvas.height);
+  ctx.fillStyle = "rgba(0,20,42,.22)";
+  ctx.fillRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
+  drawOppositesTemple();
+  drawOppositesEmblem(205, 128, "fire");
+  drawOppositesEmblem(1065, 128, "moon");
+  drawPixelObject("lamp", 350, 425, 3);
+  drawPixelObject("lamp", 930, 425, 3);
+}
+
+function drawOppositesTemple() {
+  ctx.save();
+  ctx.translate(488, 135);
+  ctx.fillStyle = "rgba(0,0,0,.24)";
+  ctx.fillRect(16, 230, 390, 25);
+  ctx.fillStyle = "#bfa778";
+  ctx.fillRect(0, 214, 420, 24);
+  ctx.fillStyle = "#eadbbd";
+  ctx.fillRect(22, 0, 376, 44);
+  ctx.fillRect(38, 194, 344, 24);
+  const colors = ["#f6e5bd", "#dce4ef"];
+  for (let i = 0; i < 7; i++) {
+    const cx = 54 + i * 52;
+    ctx.fillStyle = colors[i % 2];
+    ctx.fillRect(cx, 44, 26, 150);
+    ctx.fillStyle = "rgba(88,65,42,.18)";
+    ctx.fillRect(cx + 10, 44, 4, 150);
+  }
+  ctx.fillStyle = "rgba(18,30,42,.18)";
+  ctx.fillRect(86, 68, 246, 100);
+  ctx.restore();
+}
+
+function drawOppositesEmblem(x, y, kind) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = "rgba(0,0,0,.22)";
   ctx.beginPath();
-  ctx.arc(210, 130, 62, 0, Math.PI * 2);
+  ctx.ellipse(0, 18, 58, 18, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#dce8ff";
+  ctx.fillStyle = kind === "fire" ? "#b8492d" : "#dce9f5";
   ctx.beginPath();
-  ctx.arc(1030, 120, 52, 0, Math.PI * 2);
+  ctx.arc(0, 0, 46, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#8c5334";
-  ctx.fillRect(0, 430, canvas.width, 210);
-  drawSun(205, 120, 58);
-  ctx.fillStyle = "#d8e7f4";
-  ctx.beginPath();
-  ctx.arc(1035, 120, 55, .35, Math.PI * 1.65);
-  ctx.fill();
-  drawColumns(510, 170, 4, "#f7e4bd");
-  drawColumns(780, 170, 4, "#d2d9e5");
+  ctx.strokeStyle = kind === "fire" ? "#f5c85b" : "#6e8398";
+  ctx.lineWidth = 5;
+  ctx.stroke();
+  if (kind === "fire") {
+    ctx.fillStyle = "#ffd45d";
+    ctx.beginPath();
+    ctx.moveTo(0, -25);
+    ctx.bezierCurveTo(28, 5, 6, 34, 0, 34);
+    ctx.bezierCurveTo(-18, 20, -8, 2, 0, -25);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = "#172638";
+    ctx.beginPath();
+    ctx.arc(17, -8, 38, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 function drawTempleScene() {
-  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  sky.addColorStop(0, "#27384b");
-  sky.addColorStop(1, "#111c27");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#3b4656";
-  ctx.fillRect(0, 440, canvas.width, 200);
-  drawHills("#17232e", 355, 70, 1.7);
-  drawColumns(390, 120, 9, "#ece0c7");
+  const rows = Math.ceil(canvas.height / TILE);
+  const cols = Math.ceil(canvas.width / TILE);
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = col * TILE;
+      const y = row * TILE;
+      const centerDist = Math.hypot(col - cols / 2, row - rows / 2);
+      drawTile(centerDist < 9 ? "marble" : "darkMarble", x, y, col, row);
+    }
+  }
+  drawLogosTemple();
+  drawLogosAltar();
+  drawPixelObject("scrollStand", 270, 470, 3);
+  drawPixelObject("laurel", 1040, 470, 3);
+}
+
+function drawLogosTemple() {
+  ctx.save();
+  ctx.translate(420, 78);
+  ctx.fillStyle = "rgba(0,0,0,.32)";
+  ctx.fillRect(0, 230, 460, 30);
+  ctx.fillStyle = "#8c7352";
+  ctx.fillRect(-20, 204, 500, 26);
+  ctx.fillStyle = "#eee2c3";
+  ctx.fillRect(0, 0, 460, 42);
+  ctx.fillRect(18, 184, 424, 28);
+  ctx.fillStyle = "#d3bf96";
+  ctx.fillRect(74, 58, 312, 108);
+  ctx.fillStyle = "#1c2b3b";
+  ctx.fillRect(94, 72, 272, 80);
+  for (let i = 0; i < 9; i++) {
+    const cx = 36 + i * 48;
+    ctx.fillStyle = "#f6ead0";
+    ctx.fillRect(cx, 42, 24, 142);
+    ctx.fillStyle = "rgba(96,72,45,.2)";
+    ctx.fillRect(cx + 9, 42, 4, 142);
+  }
   ctx.fillStyle = "#e7b84a";
-  ctx.font = "700 58px Georgia,serif";
+  ctx.font = "700 34px Georgia,serif";
   ctx.textAlign = "center";
-  ctx.fillText("LOGOS", canvas.width / 2, 100);
+  ctx.fillText("LOGOS", 230, 116);
+  ctx.restore();
+}
+
+function drawLogosAltar() {
+  ctx.save();
+  ctx.translate(610, 350);
+  ctx.fillStyle = "rgba(0,0,0,.25)";
+  ctx.fillRect(-54, 72, 148, 20);
+  ctx.fillStyle = "#7f6241";
+  ctx.fillRect(-40, 46, 120, 30);
+  ctx.fillStyle = "#d8c193";
+  ctx.fillRect(-30, 0, 100, 52);
+  ctx.fillStyle = "#e7b84a";
+  ctx.beginPath();
+  ctx.arc(20, 24, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fff2b7";
+  ctx.fillRect(14, 8, 12, 32);
+  ctx.restore();
 }
 
 function drawSun(x, y, radius) {
