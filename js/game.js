@@ -71,7 +71,7 @@ const stations = [
     id: "fragmento-rio",
     phase: 1,
     x: 560,
-    y: 210,
+    y: 340,
     kind: "choice",
     label: "Questao",
     title: "O rio como imagem filosofica",
@@ -84,8 +84,8 @@ const stations = [
   {
     id: "mapa-conceitos",
     phase: 1,
-    x: 820,
-    y: 380,
+    x: 760,
+    y: 366,
     kind: "match",
     label: "Associacao",
     title: "Primeiro mapa conceitual",
@@ -100,8 +100,8 @@ const stations = [
   {
     id: "ordem-inicial",
     phase: 1,
-    x: 1060,
-    y: 230,
+    x: 1050,
+    y: 345,
     kind: "order",
     label: "Sequencia",
     title: "Da aparencia ao problema filosofico",
@@ -170,7 +170,7 @@ const stations = [
     id: "fogo-agua",
     phase: 3,
     x: 275,
-    y: 230,
+    y: 270,
     kind: "reading",
     label: "Leitura",
     title: "O patio dos opostos",
@@ -234,7 +234,7 @@ const stations = [
     id: "forca-logos",
     phase: 4,
     x: 500,
-    y: 220,
+    y: 430,
     kind: "hangman",
     label: "Forca",
     title: "Descubra o conceito final",
@@ -247,7 +247,7 @@ const stations = [
     id: "logos-vf",
     phase: 4,
     x: 740,
-    y: 360,
+    y: 440,
     kind: "tf",
     label: "Verdadeiro ou falso",
     title: "O logos organiza a mudanca",
@@ -263,7 +263,7 @@ const stations = [
     id: "sintese",
     phase: 4,
     x: 950,
-    y: 390,
+    y: 455,
     kind: "choice",
     label: "Questao final",
     title: "Sintese da jornada",
@@ -277,7 +277,7 @@ const stations = [
     id: "reflexao-final",
     phase: 4,
     x: 1110,
-    y: 230,
+    y: 350,
     kind: "reflection",
     label: "Reflexao",
     title: "O que mudou em sua leitura do mundo?",
@@ -488,10 +488,68 @@ function movePlayer() {
 }
 
 function isWorldBlocked(x, y) {
-  if (currentPhase().area !== "polis") return false;
+  const area = currentPhase().area;
+  if (isTerrainBlocked(area, x, y)) return true;
+  if (area !== "polis") return false;
   return polisProps.some(prop => {
     return Math.hypot(x - prop.x, y - (prop.y + 14)) < player.r + prop.block * prop.scale;
   }) || polisNpcs.some(npc => Math.hypot(x - npc.x, y - (npc.y + 16)) < player.r + 18);
+}
+
+function isTerrainBlocked(area, x, y) {
+  if (x < 24 || x > canvas.width - 24 || y < 24 || y > canvas.height - 24) return true;
+  if (area === "polis") return isPolisTerrainBlocked(x, y);
+  if (area === "river") return isRiverTerrainBlocked(x, y);
+  if (area === "opposites") return y < 235 || y > 575;
+  if (area === "temple") return y < 285 || y > 575 || (x > 360 && x < 980 && y < 405);
+  return false;
+}
+
+function polisTileTypeAt(x, y) {
+  const col = Math.floor(x / TILE);
+  const row = Math.floor(y / TILE);
+  const shore = 11 + Math.round(Math.sin(col * .42) * 1.25);
+  if (row < 8) return "sky";
+  if (row >= shore + 2) return "water";
+  if (row >= shore) return "shore";
+  if ((row === 9 || row === 10) && col > 3 && col < 27) return "road";
+  return "grass";
+}
+
+function isPolisTerrainBlocked(x, y) {
+  const footY = y + player.r;
+  const tile = polisTileTypeAt(x, footY);
+  if (tile === "sky" || tile === "water") return true;
+  const insideTempleColumns = x > 665 && x < 1005 && y > 230 && y < 328;
+  if (insideTempleColumns) return true;
+  return false;
+}
+
+function isRiverTerrainBlocked(x, y) {
+  const bridgeBand = y > 292 && y < 338 && x > 180 && x < 1100;
+  const path = [[150, 315], [235, 315], [470, 245], [720, 405], [980, 240], [1130, 330]];
+  const onRoute = path.some((point, index) => {
+    if (!index) return false;
+    return distanceToSegment(x, y, path[index - 1][0], path[index - 1][1], point[0], point[1]) < 54;
+  });
+  const steppingStones = [
+    [350, 410], [470, 360], [595, 310], [730, 285], [860, 330], [985, 390]
+  ];
+  const onStone = steppingStones.some(([sx, sy]) => Math.hypot(x - sx, y - sy) < 38);
+  if (bridgeBand || onRoute || onStone) return false;
+  return x > 185 && x < canvas.width - 185;
+}
+
+function distanceToSegment(px, py, ax, ay, bx, by) {
+  const vx = bx - ax;
+  const vy = by - ay;
+  const wx = px - ax;
+  const wy = py - ay;
+  const lengthSq = vx * vx + vy * vy;
+  const tValue = lengthSq ? Math.max(0, Math.min(1, (wx * vx + wy * vy) / lengthSq)) : 0;
+  const cx = ax + tValue * vx;
+  const cy = ay + tValue * vy;
+  return Math.hypot(px - cx, py - cy);
 }
 
 function checkStations() {
@@ -1123,6 +1181,36 @@ function drawRiverScene() {
   }
   drawColumns(16, 170, 2, "#e9ddbf");
   drawColumns(1090, 190, 2, "#e9ddbf");
+  drawRiverCrossing();
+}
+
+function drawRiverCrossing() {
+  const route = [[150, 315], [235, 315], [470, 245], [720, 405], [980, 240], [1130, 330]];
+  ctx.save();
+  ctx.strokeStyle = "rgba(88,54,31,.5)";
+  ctx.lineWidth = 18;
+  ctx.lineCap = "round";
+  ctx.setLineDash([30, 38]);
+  ctx.beginPath();
+  route.forEach(([x, y], index) => {
+    if (index) ctx.lineTo(x, y);
+    else ctx.moveTo(x, y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+  route.forEach(([x, y], index) => {
+    if (!index || index === route.length - 1) return;
+    ctx.fillStyle = index % 2 ? "#c7b18b" : "#b6a07a";
+    ctx.strokeStyle = "#5f4930";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(x, y + 12, 35, 16, Math.sin(index) * .3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,.16)";
+    ctx.fillRect(x - 14, y + 3, 18, 4);
+  });
+  ctx.restore();
 }
 
 function drawOppositesScene() {
