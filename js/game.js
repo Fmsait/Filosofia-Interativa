@@ -305,22 +305,36 @@ let t = 0;
 const player = {
   x: 110,
   y: 330,
-  r: 18,
-  speed: 4.1,
+  r: 15,
+  speed: 3.7,
   power: 0,
   direction: "down",
   moving: false,
   walkFrame: 0
 };
 
-const TILE = 40;
+const TILE = 32;
 const polisProps = [
-  { type: "olive", x: 610, y: 470, scale: 1.05 },
-  { type: "olive", x: 720, y: 505, scale: .82 },
-  { type: "cypress", x: 1125, y: 325, scale: 1.08 },
-  { type: "cypress", x: 1175, y: 355, scale: .86 },
-  { type: "amphora", x: 540, y: 430, scale: .75 },
-  { type: "amphora", x: 1045, y: 425, scale: .65 }
+  { type: "olive", x: 620, y: 462, scale: 1.05, block: 28 },
+  { type: "olive", x: 725, y: 510, scale: .82, block: 24 },
+  { type: "cypress", x: 1118, y: 318, scale: 1.08, block: 22 },
+  { type: "cypress", x: 1170, y: 348, scale: .86, block: 20 },
+  { type: "amphora", x: 520, y: 418, scale: .8, block: 16 },
+  { type: "amphora", x: 1040, y: 430, scale: .68, block: 15 },
+  { type: "crate", x: 380, y: 428, scale: 1, block: 18 },
+  { type: "crate", x: 425, y: 428, scale: .86, block: 17 },
+  { type: "chest", x: 935, y: 498, scale: .85, block: 18 },
+  { type: "scrollStand", x: 930, y: 378, scale: .9, block: 18 },
+  { type: "lamp", x: 1018, y: 355, scale: .8, block: 14 },
+  { type: "brokenColumn", x: 235, y: 500, scale: 1, block: 18 },
+  { type: "laurel", x: 825, y: 420, scale: .72, block: 14 }
+];
+
+const polisNpcs = [
+  { role: "merchant", x: 205, y: 384, direction: "right", bob: .2 },
+  { role: "soldier", x: 650, y: 352, direction: "down", bob: .55 },
+  { role: "priestess", x: 875, y: 310, direction: "left", bob: .8 },
+  { role: "fisher", x: 1120, y: 500, direction: "left", bob: .35 }
 ];
 
 window.addEventListener("keydown", event => {
@@ -476,9 +490,8 @@ function movePlayer() {
 function isWorldBlocked(x, y) {
   if (currentPhase().area !== "polis") return false;
   return polisProps.some(prop => {
-    const radius = prop.type === "amphora" ? 18 : 25;
-    return Math.hypot(x - prop.x, y - (prop.y + 12)) < player.r + radius * prop.scale;
-  });
+    return Math.hypot(x - prop.x, y - (prop.y + 14)) < player.r + prop.block * prop.scale;
+  }) || polisNpcs.some(npc => Math.hypot(x - npc.x, y - (npc.y + 16)) < player.r + 18);
 }
 
 function checkStations() {
@@ -896,6 +909,7 @@ function makeWordGrid(words) {
 
 function drawScene() {
   const phase = currentPhase();
+  ctx.imageSmoothingEnabled = false;
   if (phase.area === "river") drawRiverScene();
   else if (phase.area === "opposites") drawOppositesScene();
   else if (phase.area === "temple") drawTempleScene();
@@ -919,7 +933,10 @@ function drawPolisScene() {
   drawPolisTilemap();
   drawColumns(780, 175, 7, "#eee3c7");
   drawMarket();
-  polisProps.forEach(drawWorldProp);
+  [...polisProps, ...polisNpcs].sort((a, b) => a.y - b.y).forEach(item => {
+    if (item.role) drawNpc(item);
+    else drawWorldProp(item);
+  });
 }
 
 function tileNoise(col, row) {
@@ -964,10 +981,13 @@ function drawTile(type, x, y, col, row) {
     return;
   }
   if (type === "road") {
-    ctx.fillStyle = noise > .5 ? "#a59068" : "#97845f";
+    ctx.fillStyle = noise > .5 ? "#b9a176" : "#a88f68";
     ctx.fillRect(x, y, TILE + 1, TILE + 1);
-    ctx.strokeStyle = "rgba(67,54,37,.18)";
-    ctx.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+    ctx.strokeStyle = "rgba(73,58,39,.2)";
+    ctx.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
+    ctx.fillStyle = "rgba(239,219,168,.18)";
+    ctx.fillRect(x + 4, y + 4, 9, 7);
+    ctx.fillRect(x + 18, y + 18, 8, 6);
     return;
   }
   ctx.fillStyle = noise > .5 ? "#657a4e" : "#708356";
@@ -988,16 +1008,19 @@ function drawWorldProp(prop) {
   ctx.ellipse(0, 24, 24, 8, 0, 0, Math.PI * 2);
   ctx.fill();
   if (prop.type === "amphora") {
-    ctx.fillStyle = "#a95a25";
-    ctx.beginPath();
-    ctx.moveTo(-11, -16);
-    ctx.bezierCurveTo(-24, -2, -16, 25, 0, 31);
-    ctx.bezierCurveTo(16, 25, 24, -2, 11, -16);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "#4b2817";
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    drawPixelObject("amphora", -24, -38, 3);
+  } else if (prop.type === "crate") {
+    drawPixelObject("crate", -22, -10, 3);
+  } else if (prop.type === "chest") {
+    drawPixelObject("chest", -24, -14, 3);
+  } else if (prop.type === "scrollStand") {
+    drawPixelObject("scrollStand", -22, -34, 3);
+  } else if (prop.type === "lamp") {
+    drawPixelObject("lamp", -15, -43, 3);
+  } else if (prop.type === "brokenColumn") {
+    drawPixelObject("brokenColumn", -24, -22, 3);
+  } else if (prop.type === "laurel") {
+    drawPixelObject("laurel", -25, -28, 3);
   } else {
     ctx.fillStyle = "#79502d";
     ctx.fillRect(-5, -2, 10, 34);
@@ -1017,6 +1040,60 @@ function drawWorldProp(prop) {
       }
     }
   }
+  ctx.restore();
+}
+
+function drawPixelObject(type, x, y, scale) {
+  const px = (cx, cy, w, h, color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x + cx * scale, y + cy * scale, w * scale, h * scale);
+  };
+  const dark = "#2a1b13";
+  if (type === "amphora") {
+    px(5, 0, 6, 2, dark); px(4, 2, 8, 2, "#73321d"); px(2, 4, 12, 4, "#b85d2c");
+    px(1, 8, 14, 6, "#ca7432"); px(2, 14, 12, 4, "#9c4a27"); px(4, 18, 8, 2, dark);
+    px(0, 6, 2, 6, dark); px(14, 6, 2, 6, dark); px(5, 9, 6, 2, "#ffd178");
+  } else if (type === "crate") {
+    px(0, 1, 15, 12, dark); px(1, 2, 13, 10, "#9f5e27"); px(2, 3, 11, 2, "#c18037");
+    px(2, 9, 11, 2, "#6f3f1e"); px(3, 5, 2, 5, "#70401d"); px(10, 5, 2, 5, "#70401d");
+  } else if (type === "chest") {
+    px(0, 3, 16, 10, dark); px(1, 1, 14, 5, "#d79827"); px(1, 6, 14, 7, "#96531e");
+    px(7, 5, 2, 4, "#ffd96b"); px(2, 2, 12, 1, "#ffe28a");
+  } else if (type === "scrollStand") {
+    px(2, 0, 12, 13, dark); px(3, 1, 10, 11, "#e0bd79"); px(4, 3, 8, 1, "#82512a");
+    px(4, 6, 8, 1, "#82512a"); px(4, 9, 6, 1, "#82512a"); px(6, 13, 4, 5, "#6c4527");
+  } else if (type === "lamp") {
+    px(6, 7, 3, 12, "#4b2a19"); px(2, 16, 11, 3, dark); px(3, 12, 9, 5, "#a85a24");
+    px(6, 0, 3, 3, "#fff0a8"); px(5, 3, 5, 5, "#f0a22c"); px(4, 6, 7, 3, "#c54e28");
+  } else if (type === "brokenColumn") {
+    px(1, 10, 16, 4, dark); px(2, 6, 11, 5, "#d9c8a5"); px(5, 0, 8, 7, "#eee2c3");
+    px(5, 2, 8, 1, "#a48d66"); px(7, 7, 3, 8, "#cbb78f");
+  } else if (type === "laurel") {
+    for (let i = 0; i < 7; i++) {
+      px(2 + i, 8 - i, 3, 4, i % 2 ? "#2f7c44" : "#4f9b50");
+      px(13 - i, 8 - i, 3, 4, i % 2 ? "#2f7c44" : "#4f9b50");
+    }
+    px(7, 12, 5, 2, "#d9a236");
+  }
+}
+
+function drawNpc(npc) {
+  ctx.save();
+  const idle = Math.sin(t * 2 + npc.bob) * .7;
+  ctx.translate(npc.x, npc.y + idle);
+  const palettes = {
+    merchant: { tunic: "#a8672c", trim: "#e0a147", hair: "#2b1b14", skin: "#c9895d" },
+    soldier: { tunic: "#7f3127", trim: "#b9b9b9", hair: "#3c2718", skin: "#c9895d", helmet: "#b4ad9d" },
+    priestess: { tunic: "#eee1c9", trim: "#8d3c8f", hair: "#3d2242", skin: "#d49b6c" },
+    fisher: { tunic: "#2d7d91", trim: "#91d5d5", hair: "#1e1c1a", skin: "#bf8058" }
+  };
+  drawPixelPerson({
+    direction: npc.direction,
+    moving: false,
+    walk: t + npc.bob,
+    scale: 3,
+    palette: palettes[npc.role] || palettes.merchant
+  });
   ctx.restore();
 }
 
@@ -1156,17 +1233,23 @@ function drawColumns(x, y, count, color) {
 }
 
 function drawMarket() {
-  ctx.fillStyle = "#fff0c8";
   for (let i = 0; i < 4; i++) {
     const x = 80 + i * 125;
-    ctx.fillRect(x, 350, 78, 80);
-    ctx.fillStyle = "#a84d36";
-    ctx.beginPath();
-    ctx.moveTo(x - 8, 350);
-    ctx.lineTo(x + 39, 312);
-    ctx.lineTo(x + 86, 350);
-    ctx.fill();
-    ctx.fillStyle = "#fff0c8";
+    ctx.fillStyle = "rgba(16,23,18,.22)";
+    ctx.fillRect(x + 4, 426, 78, 10);
+    ctx.fillStyle = "#5a3921";
+    ctx.fillRect(x + 8, 356, 8, 76);
+    ctx.fillRect(x + 65, 356, 8, 76);
+    ctx.fillStyle = "#d9bc77";
+    ctx.fillRect(x + 14, 386, 54, 38);
+    ctx.fillStyle = i % 2 ? "#2f7891" : "#a84d36";
+    ctx.fillRect(x, 344, 82, 12);
+    ctx.fillStyle = i % 2 ? "#f0d38b" : "#f5c75e";
+    for (let stripe = 0; stripe < 5; stripe++) ctx.fillRect(x + stripe * 17, 344, 8, 12);
+    ctx.fillStyle = "#302014";
+    ctx.fillRect(x - 4, 340, 90, 5);
+    drawPixelObject(i % 2 ? "crate" : "amphora", x + 25, 388, 2);
+    drawPixelObject(i % 2 ? "scrollStand" : "crate", x + 45, 390, 2);
   }
 }
 
@@ -1207,91 +1290,84 @@ function drawStations() {
   ctx.restore();
 }
 
-function drawPlayer() {
+function drawPixelPerson({ direction, moving, walk, scale, palette }) {
+  const s = scale;
+  const step = moving ? Math.sign(Math.sin(walk * Math.PI)) : 0;
+  const side = direction === "left" || direction === "right";
+  const facing = direction === "left" ? -1 : 1;
+  const px = (x, y, w, h, color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect((x - 8) * s, (y - 24) * s, w * s, h * s);
+  };
+
   ctx.save();
-  const stride = player.moving ? Math.sin(player.walkFrame * Math.PI) : 0;
-  const bob = player.moving ? Math.abs(stride) * 2 : Math.sin(t * 2) * .6;
-  const facing = player.direction === "left" ? -1 : 1;
-  ctx.translate(player.x, player.y - bob);
-  ctx.scale(facing * 1.18, 1.18);
-  const glow = ["#ffffff", "#66c5d6", "#c45f3b", "#e7b84a"][Math.min(player.power, 3)];
-  ctx.fillStyle = "rgba(5,18,22,.3)";
-  ctx.beginPath();
-  ctx.ellipse(0, 43 + bob, 23 - Math.abs(stride) * 2, 8, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = player.power ? 18 : 0;
-
-  ctx.strokeStyle = "#3b261a";
-  ctx.lineWidth = 7;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(-7, 19);
-  ctx.lineTo(-10 - stride * 7, 42);
-  ctx.moveTo(7, 19);
-  ctx.lineTo(10 + stride * 7, 42);
-  ctx.stroke();
-
-  ctx.fillStyle = player.power >= 3 ? "#e6ba4b" : "#eee2c9";
-  ctx.beginPath();
-  ctx.moveTo(-16, -7);
-  ctx.quadraticCurveTo(-19, 12, -13, 29);
-  ctx.lineTo(13, 29);
-  ctx.quadraticCurveTo(19, 12, 16, -7);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#7b4a2a";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  ctx.fillStyle = "#9f4d2d";
-  ctx.fillRect(-17, 6, 34, 8);
-  ctx.fillStyle = "#e7bb57";
-  ctx.fillRect(-3, 6, 6, 8);
-
-  ctx.strokeStyle = "#5b3522";
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.moveTo(-14, -2);
-  ctx.lineTo(-23 + stride * 5, 18);
-  ctx.moveTo(14, -2);
-  ctx.lineTo(23 - stride * 5, 18);
-  ctx.stroke();
-
-  ctx.fillStyle = "#d29a6e";
-  ctx.beginPath();
-  ctx.arc(0, -21, 14, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#2d211d";
-  ctx.beginPath();
-  ctx.arc(0, -25, 14, Math.PI, Math.PI * 2);
-  ctx.arc(-9, -22, 6, Math.PI * .55, Math.PI * 1.55);
-  ctx.fill();
-
-  if (player.direction !== "up") {
-    ctx.fillStyle = "#241a18";
-    ctx.beginPath();
-    ctx.arc(5, -21, 1.7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#7c422c";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(7, -15, 4, .3, 1.65);
-    ctx.stroke();
+  ctx.scale(facing, 1);
+  px(4, 21, 8, 2, "rgba(0,0,0,.25)");
+  px(5, 0, 6, 1, "#1f1712");
+  px(3, 1, 10, 2, palette.hair);
+  px(2, 3, 12, 3, palette.hair);
+  px(3, 4, 10, 6, palette.skin);
+  if (direction === "up") {
+    px(2, 4, 12, 5, palette.hair);
+  } else if (side) {
+    px(9, 6, 2, 1, "#1d1511");
+    px(11, 7, 1, 1, "#7b432b");
+  } else {
+    px(5, 6, 2, 1, "#1d1511");
+    px(9, 6, 2, 1, "#1d1511");
+    px(7, 8, 3, 1, "#7b432b");
+  }
+  if (palette.helmet) {
+    px(2, 0, 12, 4, palette.helmet);
+    px(7, -3, 2, 3, "#9b2e22");
   }
 
-  ctx.fillStyle = "#39261b";
-  ctx.fillRect(-18 - stride * 7, 39, 13, 6);
-  ctx.fillRect(5 + stride * 7, 39, 13, 6);
+  px(3, 10, 10, 9, "#1f1712");
+  px(4, 10, 8, 8, palette.tunic);
+  px(4, 13, 8, 2, palette.trim);
+  px(7, 10, 2, 8, "rgba(255,255,255,.2)");
 
+  const armSwing = moving ? step : 0;
+  px(1, 11 + Math.max(0, armSwing), 3, 7, "#1f1712");
+  px(12, 11 + Math.max(0, -armSwing), 3, 7, "#1f1712");
+  px(1, 11 + Math.max(0, armSwing), 2, 6, palette.skin);
+  px(13, 11 + Math.max(0, -armSwing), 2, 6, palette.skin);
+
+  const leftLeg = moving ? step : 0;
+  const rightLeg = moving ? -step : 0;
+  px(4, 18 + Math.max(0, leftLeg), 3, 5, "#2c2019");
+  px(9, 18 + Math.max(0, rightLeg), 3, 5, "#2c2019");
+  px(3, 22 + Math.max(0, leftLeg), 5, 2, "#1d1410");
+  px(8, 22 + Math.max(0, rightLeg), 5, 2, "#1d1410");
+  ctx.restore();
+}
+
+function drawPlayer() {
+  ctx.save();
+  const bob = player.moving ? Math.abs(Math.sin(player.walkFrame * Math.PI)) * 2 : Math.sin(t * 2) * .45;
+  const glow = ["#ffffff", "#66c5d6", "#c45f3b", "#e7b84a"][Math.min(player.power, 3)];
+  ctx.translate(player.x, player.y - bob);
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = player.power ? 14 : 0;
+  drawPixelPerson({
+    direction: player.direction,
+    moving: player.moving,
+    walk: player.walkFrame,
+    scale: 3,
+    palette: {
+      tunic: player.power >= 3 ? "#d9a42f" : "#eee1c9",
+      trim: "#9f4d2d",
+      hair: "#2b1d17",
+      skin: "#d29a6e"
+    }
+  });
+  ctx.shadowBlur = 0;
   if (player.power) {
-    ctx.scale(facing, 1);
     ctx.fillStyle = glow;
     for (let i = 0; i < player.power; i++) {
       const angle = t * 1.8 + i * Math.PI * 2 / player.power;
       ctx.beginPath();
-      ctx.arc(Math.cos(angle) * 35, Math.sin(angle) * 24 - 10, 5, 0, Math.PI * 2);
+      ctx.arc(Math.cos(angle) * 33, Math.sin(angle) * 22 - 18, 4.5, 0, Math.PI * 2);
       ctx.fill();
     }
   }
