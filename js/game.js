@@ -315,26 +315,26 @@ const player = {
 
 const TILE = 32;
 const polisProps = [
-  { type: "olive", x: 620, y: 462, scale: 1.05, block: 28 },
-  { type: "olive", x: 725, y: 510, scale: .82, block: 24 },
-  { type: "cypress", x: 1118, y: 318, scale: 1.08, block: 22 },
-  { type: "cypress", x: 1170, y: 348, scale: .86, block: 20 },
-  { type: "amphora", x: 520, y: 418, scale: .8, block: 16 },
-  { type: "amphora", x: 1040, y: 430, scale: .68, block: 15 },
-  { type: "crate", x: 380, y: 428, scale: 1, block: 18 },
-  { type: "crate", x: 425, y: 428, scale: .86, block: 17 },
-  { type: "chest", x: 935, y: 498, scale: .85, block: 18 },
-  { type: "scrollStand", x: 930, y: 378, scale: .9, block: 18 },
-  { type: "lamp", x: 1018, y: 355, scale: .8, block: 14 },
-  { type: "brokenColumn", x: 235, y: 500, scale: 1, block: 18 },
-  { type: "laurel", x: 825, y: 420, scale: .72, block: 14 }
+  { type: "olive", x: 1120, y: 420, scale: 1.05, block: 28 },
+  { type: "olive", x: 1045, y: 520, scale: .82, block: 24 },
+  { type: "cypress", x: 1180, y: 182, scale: 1.08, block: 22 },
+  { type: "cypress", x: 1140, y: 245, scale: .86, block: 20 },
+  { type: "amphora", x: 505, y: 432, scale: .8, block: 16 },
+  { type: "amphora", x: 1010, y: 388, scale: .68, block: 15 },
+  { type: "crate", x: 342, y: 438, scale: 1, block: 18 },
+  { type: "crate", x: 390, y: 438, scale: .86, block: 17 },
+  { type: "chest", x: 930, y: 505, scale: .85, block: 18 },
+  { type: "scrollStand", x: 930, y: 350, scale: .9, block: 18 },
+  { type: "lamp", x: 660, y: 235, scale: .8, block: 14 },
+  { type: "brokenColumn", x: 238, y: 515, scale: 1, block: 18 },
+  { type: "laurel", x: 825, y: 430, scale: .72, block: 14 }
 ];
 
 const polisNpcs = [
-  { role: "merchant", x: 205, y: 384, direction: "right", bob: .2 },
-  { role: "soldier", x: 650, y: 352, direction: "down", bob: .55 },
-  { role: "priestess", x: 875, y: 310, direction: "left", bob: .8 },
-  { role: "fisher", x: 1120, y: 500, direction: "left", bob: .35 }
+  { role: "merchant", x: 210, y: 392, direction: "right", bob: .2 },
+  { role: "soldier", x: 665, y: 285, direction: "down", bob: .55 },
+  { role: "priestess", x: 880, y: 300, direction: "left", bob: .8 },
+  { role: "fisher", x: 1110, y: 505, direction: "left", bob: .35 }
 ];
 
 window.addEventListener("keydown", event => {
@@ -492,8 +492,15 @@ function isWorldBlocked(x, y) {
   if (isTerrainBlocked(area, x, y)) return true;
   if (area !== "polis") return false;
   return polisProps.some(prop => {
-    return Math.hypot(x - prop.x, y - (prop.y + 14)) < player.r + prop.block * prop.scale;
-  }) || polisNpcs.some(npc => Math.hypot(x - npc.x, y - (npc.y + 16)) < player.r + 18);
+    return isCircleBlocked(x, y, prop.x, prop.y + 14, player.r + prop.block * prop.scale);
+  }) || polisNpcs.some(npc => isCircleBlocked(x, y, npc.x, npc.y + 16, player.r + 18));
+}
+
+function isCircleBlocked(nextX, nextY, obstacleX, obstacleY, radius) {
+  const nextDistance = Math.hypot(nextX - obstacleX, nextY - obstacleY);
+  if (nextDistance >= radius) return false;
+  const currentDistance = Math.hypot(player.x - obstacleX, player.y - obstacleY);
+  return currentDistance >= radius || nextDistance <= currentDistance + .1;
 }
 
 function isTerrainBlocked(area, x, y) {
@@ -508,20 +515,24 @@ function isTerrainBlocked(area, x, y) {
 function polisTileTypeAt(x, y) {
   const col = Math.floor(x / TILE);
   const row = Math.floor(y / TILE);
-  const shore = 11 + Math.round(Math.sin(col * .42) * 1.25);
-  if (row < 8) return "sky";
-  if (row >= shore + 2) return "water";
-  if (row >= shore) return "shore";
-  if ((row === 9 || row === 10) && col > 3 && col < 27) return "road";
+  if (row >= 16) return "water";
+  if (row >= 14) return "shore";
+  if (col >= 21 && col <= 35 && row >= 2 && row <= 8) return "templeFloor";
+  if (col >= 8 && col <= 20 && row >= 8 && row <= 12) return "plaza";
+  if (row >= 9 && row <= 11 && col >= 2 && col <= 35) return "road";
+  if (col >= 16 && col <= 18 && row >= 3 && row <= 14) return "road";
+  if (col >= 25 && col <= 27 && row >= 8 && row <= 14) return "road";
+  if (col <= 5 && row <= 5) return "garden";
+  if (col >= 35 && row <= 7) return "garden";
   return "grass";
 }
 
 function isPolisTerrainBlocked(x, y) {
   const footY = y + player.r;
   const tile = polisTileTypeAt(x, footY);
-  if (tile === "sky" || tile === "water") return true;
-  const insideTempleColumns = x > 665 && x < 1005 && y > 230 && y < 328;
-  if (insideTempleColumns) return true;
+  if (tile === "water") return true;
+  const templeFootprint = x > 712 && x < 1118 && y > 55 && y < 232;
+  if (templeFootprint) return true;
   return false;
 }
 
@@ -979,17 +990,8 @@ function drawScene() {
 }
 
 function drawPolisScene() {
-  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  sky.addColorStop(0, "#79c2e5");
-  sky.addColorStop(.55, "#d9dcba");
-  sky.addColorStop(1, "#7b9b63");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  drawSun(1100, 95, 54);
-  drawHills("#67835e", 250, 45, 1.4);
-  drawHills("#426d58", 335, 60, 2.1);
   drawPolisTilemap();
-  drawColumns(780, 175, 7, "#eee3c7");
+  drawTopDownParthenon(720, 58);
   drawMarket();
   [...polisProps, ...polisNpcs].sort((a, b) => a.y - b.y).forEach(item => {
     if (item.role) drawNpc(item);
@@ -1005,15 +1007,11 @@ function tileNoise(col, row) {
 function drawPolisTilemap() {
   const rows = Math.ceil(canvas.height / TILE);
   const cols = Math.ceil(canvas.width / TILE);
-  for (let row = 8; row < rows; row++) {
+  for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const x = col * TILE;
       const y = row * TILE;
-      const shore = 11 + Math.round(Math.sin(col * .42) * 1.25);
-      if (row >= shore + 2) drawTile("water", x, y, col, row);
-      else if (row >= shore) drawTile("shore", x, y, col, row);
-      else if ((row === 9 || row === 10) && col > 3 && col < 27) drawTile("road", x, y, col, row);
-      else drawTile("grass", x, y, col, row);
+      drawTile(polisTileTypeAt(x + TILE / 2, y + TILE / 2), x, y, col, row);
     }
   }
 }
@@ -1036,6 +1034,23 @@ function drawTile(type, x, y, col, row) {
     ctx.fillRect(x, y, TILE + 1, TILE + 1);
     ctx.fillStyle = "rgba(92,72,43,.3)";
     ctx.fillRect(x + 8 + noise * 18, y + 12, 3, 2);
+    return;
+  }
+  if (type === "plaza" || type === "templeFloor") {
+    ctx.fillStyle = type === "templeFloor" ? (noise > .5 ? "#d8c7a2" : "#cdb990") : (noise > .5 ? "#b9aa86" : "#aa9975");
+    ctx.fillRect(x, y, TILE + 1, TILE + 1);
+    ctx.strokeStyle = "rgba(82,65,43,.22)";
+    ctx.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
+    ctx.fillStyle = "rgba(255,244,212,.18)";
+    ctx.fillRect(x + 5, y + 5, 11, 5);
+    return;
+  }
+  if (type === "garden") {
+    ctx.fillStyle = noise > .5 ? "#4f6d3d" : "#5f7d46";
+    ctx.fillRect(x, y, TILE + 1, TILE + 1);
+    ctx.fillStyle = noise > .55 ? "#7f9d52" : "#3f653d";
+    ctx.fillRect(x + 8, y + 8, 8, 5);
+    ctx.fillRect(x + 18, y + 20, 6, 4);
     return;
   }
   if (type === "road") {
@@ -1098,6 +1113,60 @@ function drawWorldProp(prop) {
       }
     }
   }
+  ctx.restore();
+}
+
+function drawTopDownParthenon(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = "rgba(20,15,10,.2)";
+  ctx.fillRect(-18, 168, 420, 22);
+  ctx.fillStyle = "#9a7d55";
+  ctx.fillRect(-28, 154, 438, 24);
+  ctx.fillStyle = "#c5ad84";
+  ctx.fillRect(-18, 132, 418, 24);
+  ctx.fillStyle = "#e6d7b6";
+  ctx.fillRect(0, 0, 380, 150);
+  ctx.strokeStyle = "#7a5b38";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(0, 0, 380, 150);
+  ctx.fillStyle = "#b99b6b";
+  ctx.fillRect(72, 34, 236, 82);
+  ctx.fillStyle = "#6f5133";
+  ctx.fillRect(82, 44, 216, 62);
+  ctx.fillStyle = "#d8c7a2";
+  ctx.fillRect(91, 52, 198, 46);
+
+  const column = (cx, cy) => {
+    ctx.fillStyle = "#6f5133";
+    ctx.fillRect(cx - 10, cy - 10, 20, 20);
+    ctx.fillStyle = "#f4e8ca";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#8d704b";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,.35)";
+    ctx.fillRect(cx - 4, cy - 8, 3, 16);
+  };
+
+  for (let i = 0; i < 8; i++) {
+    const cx = 34 + i * 45;
+    column(cx, 24);
+    column(cx, 126);
+  }
+  for (let i = 1; i < 3; i++) {
+    column(24, 42 + i * 28);
+    column(356, 42 + i * 28);
+  }
+
+  ctx.fillStyle = "#d2bd91";
+  ctx.fillRect(155, 150, 70, 22);
+  ctx.fillStyle = "#8a673d";
+  ctx.fillRect(166, 42, 48, 60);
+  ctx.fillStyle = "#f2d477";
+  ctx.fillRect(184, 51, 12, 42);
   ctx.restore();
 }
 
